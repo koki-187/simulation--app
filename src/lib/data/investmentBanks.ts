@@ -424,18 +424,24 @@ export interface HomeLoanBank {
   maxLoan: number;    // 最大借入可能額（万円）
   features: string;
   support: '一気通貫サポート' | '直接' | '';
+  auditRate: number;           // 審査金利 % (used for 返済比率 calc, often higher than actual rate)
+  repaymentRatioLimit: number; // 返済比率上限 % (e.g. 35)
+  maxCompletionAge: number;    // 完済年齢上限 (e.g. 80)
+  maxTermYears: number;        // 最長借入期間 (e.g. 35 or 50)
+  processingFee: string;       // 手数料テキスト
+  prevMonthRate: number;       // 前月金利 (for trend display)
 }
 
 export const HOME_LOAN_BANKS: HomeLoanBank[] = [
-  { id: 'sbi-shinsei', name: 'SBI新生銀行', rateType: '変動', rate: 0.590, monthlyPayment: 79075, maxLoan: 4030, features: '全疾病保障団信・外国籍・転職者・旧耐震・5年ルール非適用', support: '' },
-  { id: 'terass-special', name: 'TERASS特別金利ローン', rateType: '変動', rate: 0.845, monthlyPayment: 82536, maxLoan: 3720, features: '7種の団信プラン・諸費用10%まで・対象エリア限定', support: '一気通貫サポート' },
-  { id: 'au-jibun-cancer', name: 'auじぶん銀行（がん100%優遇割）', rateType: '変動', rate: 0.884, monthlyPayment: 83074, maxLoan: 3370, features: 'がん100%団信無料・諸費用10%可能・最大50年', support: '一気通貫サポート' },
-  { id: 'paypay', name: 'PayPay銀行', rateType: '変動', rate: 0.849, monthlyPayment: 82591, maxLoan: 4330, features: 'ペアローン連生団信（業界初）・5年ルール非適用', support: '' },
-  { id: 'resona-variable', name: 'りそな銀行（変動型）', rateType: '変動', rate: 0.950, monthlyPayment: 83989, maxLoan: 3520, features: '団信革命（三大疾病+身体障害+要介護）・買い先行対応', support: '' },
-  { id: '住信sbi', name: '住信SBIネット銀行', rateType: '変動', rate: 1.199, monthlyPayment: 87497, maxLoan: 3650, features: 'MG保証・最大50年・36年超は0.07%上乗せ', support: '' },
-  { id: 'mufg', name: '三菱UFJ銀行', rateType: '変動', rate: 0.945, monthlyPayment: 83919, maxLoan: 3340, features: 'メガバンク最優遇・最長40年（1億超物件）・全国5エリア', support: '' },
-  { id: 'aeon', name: 'イオン銀行', rateType: '変動', rate: 0.830, monthlyPayment: 82330, maxLoan: 4030, features: 'イオングループ5%OFF・狭小・単身・セカンドハウスに強い', support: '' },
-  { id: 'yokohama-home', name: '横浜銀行', rateType: '変動', rate: 0.975, monthlyPayment: 84337, maxLoan: 3890, features: '借換・リフォーム対応・40年ローン（上乗せなし）', support: '' },
-  { id: 'chiba-home', name: '千葉銀行', rateType: '変動', rate: 1.225, monthlyPayment: 87868, maxLoan: 3750, features: 'がん団信100%無料・投資用保有者可・旧耐震可・諸費用可', support: '' },
-  { id: 'flat35', name: 'フラット35（買取型）', rateType: '固定', rate: 2.490, monthlyPayment: 107088, maxLoan: 4080, features: 'ペアローン可（最大2.4億）・子育てプラス最大1%引下げ・団信不加入で-0.2%', support: '一気通貫サポート' },
+  { id: 'sbi-shinsei', name: 'SBI新生銀行', rateType: '変動', rate: 0.590, monthlyPayment: 79075, maxLoan: 4030, features: '全疾病保障団信・外国籍・転職者・旧耐震・5年ルール非適用', support: '', auditRate: 3.5, repaymentRatioLimit: 40, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×2.2%', prevMonthRate: 0.590 },
+  { id: 'terass-special', name: 'TERASS特別金利ローン', rateType: '変動', rate: 0.845, monthlyPayment: 82536, maxLoan: 3720, features: '7種の団信プラン・諸費用10%まで・対象エリア限定', support: '一気通貫サポート', auditRate: 3.0, repaymentRatioLimit: 40, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×2.2%', prevMonthRate: 0.845 },
+  { id: 'au-jibun-cancer', name: 'auじぶん銀行（がん100%優遇割）', rateType: '変動', rate: 0.884, monthlyPayment: 83074, maxLoan: 3370, features: 'がん100%団信無料・諸費用10%可能・最大50年', support: '一気通貫サポート', auditRate: 3.5, repaymentRatioLimit: 40, maxCompletionAge: 80, maxTermYears: 50, processingFee: '借入額×2.2%', prevMonthRate: 0.889 },
+  { id: 'paypay', name: 'PayPay銀行', rateType: '変動', rate: 0.849, monthlyPayment: 82591, maxLoan: 4330, features: 'ペアローン連生団信（業界初）・5年ルール非適用', support: '', auditRate: 3.5, repaymentRatioLimit: 35, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×2.2%', prevMonthRate: 0.849 },
+  { id: 'resona-variable', name: 'りそな銀行（変動型）', rateType: '変動', rate: 0.950, monthlyPayment: 83989, maxLoan: 3520, features: '団信革命（三大疾病+身体障害+要介護）・買い先行対応', support: '', auditRate: 3.5, repaymentRatioLimit: 35, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×2.2%', prevMonthRate: 0.950 },
+  { id: '住信sbi', name: '住信SBIネット銀行', rateType: '変動', rate: 1.199, monthlyPayment: 87497, maxLoan: 3650, features: 'MG保証・最大50年・36年超は0.07%上乗せ', support: '', auditRate: 3.7, repaymentRatioLimit: 40, maxCompletionAge: 80, maxTermYears: 50, processingFee: '借入額×2.2%', prevMonthRate: 1.204 },
+  { id: 'mufg', name: '三菱UFJ銀行', rateType: '変動', rate: 0.945, monthlyPayment: 83919, maxLoan: 3340, features: 'メガバンク最優遇・最長40年（1億超物件）・全国5エリア', support: '', auditRate: 3.5, repaymentRatioLimit: 35, maxCompletionAge: 80, maxTermYears: 40, processingFee: '借入額×2.2%', prevMonthRate: 0.945 },
+  { id: 'aeon', name: 'イオン銀行', rateType: '変動', rate: 0.830, monthlyPayment: 82330, maxLoan: 4030, features: 'イオングループ5%OFF・狭小・単身・セカンドハウスに強い', support: '', auditRate: 3.5, repaymentRatioLimit: 40, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×2.2%', prevMonthRate: 0.830 },
+  { id: 'yokohama-home', name: '横浜銀行', rateType: '変動', rate: 0.975, monthlyPayment: 84337, maxLoan: 3890, features: '借換・リフォーム対応・40年ローン（上乗せなし）', support: '', auditRate: 3.5, repaymentRatioLimit: 35, maxCompletionAge: 80, maxTermYears: 40, processingFee: '借入額×2.2%', prevMonthRate: 0.990 },
+  { id: 'chiba-home', name: '千葉銀行', rateType: '変動', rate: 1.225, monthlyPayment: 87868, maxLoan: 3750, features: 'がん団信100%無料・投資用保有者可・旧耐震可・諸費用可', support: '', auditRate: 3.5, repaymentRatioLimit: 35, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×2.2%', prevMonthRate: 1.225 },
+  { id: 'flat35', name: 'フラット35（買取型）', rateType: '固定', rate: 2.490, monthlyPayment: 107088, maxLoan: 4080, features: 'ペアローン可（最大2.4億）・子育てプラス最大1%引下げ・団信不加入で-0.2%', support: '一気通貫サポート', auditRate: 2.49, repaymentRatioLimit: 35, maxCompletionAge: 80, maxTermYears: 35, processingFee: '借入額×1.0%', prevMonthRate: 2.490 },
 ];

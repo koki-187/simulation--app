@@ -17,6 +17,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  Legend,
 } from 'recharts';
 import jsPDF from 'jspdf';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -26,11 +27,13 @@ require('jspdf-autotable');
 
 type Mode = 'home' | 'investment';
 type RepaymentMethod = '元利均等' | '元金均等';
+type SortBy = 'recommended' | 'rate' | 'maxLoan' | 'repaymentRatio';
 
 interface LoanResult {
   bankId: string;
   name: string;
   rate: number;
+  prevMonthRate: number;
   rateType: string;
   monthlyPayment: number;
   totalPayment: number;
@@ -38,6 +41,13 @@ interface LoanResult {
   maxLoan: number;
   features: string;
   isHomeLoan: boolean;
+  processingFee: string;
+  auditMonthlyPayment: number;
+  repaymentRatio: number;
+  isRepaymentOk: boolean;
+  maxBorrowable: number;
+  completionAge: number;
+  isAgeOk: boolean;
 }
 
 interface PDFParams {
@@ -45,6 +55,9 @@ interface PDFParams {
   principal: number;
   years: number;
   method: RepaymentMethod;
+  annualIncome: number;
+  borrowerAge: number;
+  otherLoanPayment: number;
   results: LoanResult[];
 }
 
@@ -57,22 +70,56 @@ function calcMonthly(principal: number, annualRate: number, years: number): numb
   return (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 }
 
-/** First-month payment for 元金均等 (principal-equal) */
 function calcFirstMonthGenkin(principal: number, annualRate: number, years: number): number {
   const r = annualRate / 100 / 12;
   const n = years * 12;
-  const principalPart = principal / n;
-  const interestPart = principal * r;
-  return principalPart + interestPart;
+  return principal / n + principal * r;
 }
 
 function calcTotalPaymentGenkin(principal: number, annualRate: number, years: number): number {
   const r = annualRate / 100 / 12;
   const n = years * 12;
-  // Sum = principal + interest on each remaining balance
-  // Total interest = r * principal * (n+1)/2
   const totalInterest = r * principal * (n + 1) / 2;
   return principal + totalInterest;
+}
+
+function calcAuditMonthly(principal: number, auditRate: number, years: number): number {
+  return calcMonthly(principal, auditRate, years);
+}
+
+function calcRepaymentRatio(
+  principal: number,
+  auditRate: number,
+  years: number,
+  otherLoanAnnual: number,
+  annualIncome: number,
+): number {
+  const annualPayment = calcMonthly(principal, auditRate, years) * 12;
+  return ((annualPayment + otherLoanAnnual * 10000) / (annualIncome * 10000)) * 100;
+}
+
+function calcMaxBorrowable(
+  annualIncome: number,
+  repaymentRatioLimit: number,
+  auditRate: number,
+  termYears: number,
+  bankMaxLoan: number,
+  age: number,
+  maxCompletionAge: number,
+  maxTermYears: number,
+): number {
+  const actualYears = Math.min(termYears, maxTermYears, maxCompletionAge - age);
+  if (actualYears <= 0) return 0;
+  const maxMonthlyByRatio = (annualIncome * 10000 * repaymentRatioLimit / 100) / 12;
+  const r = auditRate / 100 / 12;
+  const n = actualYears * 12;
+  let maxByIncome: number;
+  if (r === 0) {
+    maxByIncome = maxMonthlyByRatio * n;
+  } else {
+    maxByIncome = (maxMonthlyByRatio * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n));
+  }
+  return Math.min(maxByIncome / 10000, bankMaxLoan);
 }
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
@@ -83,7 +130,6 @@ function exportLoanComparePDF(params: PDFParams): void {
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   const navyRGB: [number, number, number] = [28, 43, 74];
 
-  // Header bar
   doc.setFillColor(...navyRGB);
   doc.rect(0, 0, 210, 28, 'F');
   doc.setTextColor(255, 255, 255);
@@ -95,10 +141,8 @@ function exportLoanComparePDF(params: PDFParams): void {
   doc.text('TERASS', 14, 20);
   doc.text(today, 196, 20, { align: 'right' });
 
-  // Reset text color
   doc.setTextColor(16, 24, 43);
 
-  // Section: 借入条件
   let y = 36;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -120,9 +164,29 @@ function exportLoanComparePDF(params: PDFParams): void {
     margin: { left: 14, right: 14 },
   });
 
-  y = (doc.lastAutoTable?.finalY ?? y + 40) + 10;
+  y = (doc.lastAutoTable?.finalY ?? y + 40) + 8;
 
-  // Section: 月々返済額 bar chart (horizontal bars)
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('借入者条件', 14, y);
+  y += 6;
+
+  doc.autoTable({
+    startY: y,
+    head: [['項目', '内容']],
+    body: [
+      ['年収', `${params.annualIncome.toLocaleString()}万円`],
+      ['年齢', `${params.borrowerAge}歳`],
+      ['他借入年返済額', `${params.otherLoanPayment}万円`],
+    ],
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: navyRGB, textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+    margin: { left: 14, right: 14 },
+  });
+
+  y = (doc.lastAutoTable?.finalY ?? y + 40) + 8;
+
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('月々返済額（概略グラフ）', 14, y);
@@ -142,50 +206,47 @@ function exportLoanComparePDF(params: PDFParams): void {
   });
   y += params.results.length * 10 + 10;
 
-  // Section: 比較表
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('金融機関比較表', 14, y);
   y += 4;
 
-  const tableHead = [['金融機関', '金利', '金利タイプ', '月々返済額', '総支払額', '総利息', '特徴']];
+  const tableHead = [['金融機関', '金利', '審査金利', '月々返済額', '総利息', '返済比率', '借入上限', '完済年齢', '手数料']];
   const tableBody = params.results.map(r => [
     r.name,
     `${r.rate.toFixed(3)}%`,
-    r.rateType,
+    `${(r as LoanResult & { auditRate?: number }).auditRate ?? '-'}%`,
     `${Math.round(r.monthlyPayment).toLocaleString()}円`,
-    `${Math.round(r.totalPayment / 10000).toLocaleString()}万円`,
     `${Math.round(r.totalInterest / 10000).toLocaleString()}万円`,
-    r.features.slice(0, 30) + (r.features.length > 30 ? '…' : ''),
+    `${r.repaymentRatio.toFixed(1)}% ${r.isRepaymentOk ? '✓' : '⚠'}`,
+    `${Math.round(r.maxBorrowable).toLocaleString()}万円`,
+    `${r.completionAge}歳 ${r.isAgeOk ? 'OK' : '超過'}`,
+    r.processingFee,
   ]);
 
   doc.autoTable({
     startY: y,
     head: tableHead,
     body: tableBody,
-    styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak' },
+    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
     headStyles: { fillColor: navyRGB, textColor: [255, 255, 255], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [245, 246, 248] },
     margin: { left: 14, right: 14 },
-    columnStyles: { 6: { cellWidth: 40 } },
   });
 
-  // Footer
   const pageHeight = 297;
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(150, 150, 150);
-  doc.text(
-    '本資料はTERASS株式会社が作成した参考情報です',
-    105,
-    pageHeight - 8,
-    { align: 'center' }
-  );
+  doc.text('本資料はTERASS株式会社が作成した参考情報です', 105, pageHeight - 8, { align: 'center' });
 
   doc.save(`金融機関比較レポート_${today}.pdf`);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const HOME_COLORS = ['#1C2B4A', '#E8632A', '#27AE60'];
+const INVESTMENT_COLORS = ['#1C2B4A', '#E8632A', '#27AE60'];
 
 function buildResult(
   bank: HomeLoanBank | InvestmentBank,
@@ -193,6 +254,9 @@ function buildResult(
   principalMan: number,
   years: number,
   method: RepaymentMethod,
+  annualIncome: number,
+  borrowerAge: number,
+  otherLoanPayment: number,
 ): LoanResult {
   const principal = principalMan * 10000;
   const rate = isHome ? (bank as HomeLoanBank).rate : (bank as InvestmentBank).rateMin;
@@ -211,22 +275,70 @@ function buildResult(
 
   const totalInterest = total - principal;
 
+  // Home loan specific fields
+  let auditRate = rate;
+  let repaymentRatioLimit = 35;
+  let maxCompletionAge = 80;
+  let maxTermYears = years;
+  let processingFee = '個別';
+  let prevMonthRate = rate;
+  let bankMaxLoan = isHome ? (bank as HomeLoanBank).maxLoan : 10000;
+
+  if (isHome) {
+    const hb = bank as HomeLoanBank;
+    auditRate = hb.auditRate;
+    repaymentRatioLimit = hb.repaymentRatioLimit;
+    maxCompletionAge = hb.maxCompletionAge;
+    maxTermYears = hb.maxTermYears;
+    processingFee = hb.processingFee;
+    prevMonthRate = hb.prevMonthRate;
+    bankMaxLoan = hb.maxLoan;
+  }
+
+  const auditMonthlyPayment = calcAuditMonthly(principal, auditRate, years);
+  const repaymentRatio = calcRepaymentRatio(principal, auditRate, years, otherLoanPayment, annualIncome);
+  const isRepaymentOk = repaymentRatio <= repaymentRatioLimit;
+  const completionAge = borrowerAge + years;
+  const isAgeOk = completionAge <= maxCompletionAge;
+  const maxBorrowable = isHome
+    ? calcMaxBorrowable(annualIncome, repaymentRatioLimit, auditRate, years, bankMaxLoan, borrowerAge, maxCompletionAge, maxTermYears)
+    : 0;
+
   return {
     bankId: bank.id,
     name: bank.name,
     rate,
+    prevMonthRate,
     rateType,
     monthlyPayment: monthly,
     totalPayment: total,
     totalInterest,
-    maxLoan: isHome ? (bank as HomeLoanBank).maxLoan : 0,
+    maxLoan: bankMaxLoan,
     features: bank.features,
     isHomeLoan: isHome,
+    processingFee,
+    auditMonthlyPayment,
+    repaymentRatio,
+    isRepaymentOk,
+    maxBorrowable,
+    completionAge,
+    isAgeOk,
   };
 }
 
-const HOME_COLORS = ['#1C2B4A', '#E8632A', '#27AE60'];
-const INVESTMENT_COLORS = ['#1C2B4A', '#E8632A', '#27AE60'];
+function RateTrendBadge({ current, prev }: { current: number; prev: number }) {
+  const diff = current - prev;
+  if (Math.abs(diff) < 0.0001) {
+    return <span className="text-neutral-400 text-xs">—</span>;
+  }
+  const sign = diff > 0 ? '▲' : '▼';
+  const color = diff > 0 ? 'text-danger-500' : 'text-success-500';
+  return (
+    <span className={`text-xs font-semibold tabular-nums ${color}`}>
+      {sign}{Math.abs(diff).toFixed(3)}%
+    </span>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -235,8 +347,11 @@ export default function LoanComparePage() {
   const [principal, setPrincipal] = useState(4000);
   const [years, setYears] = useState(35);
   const [method, setMethod] = useState<RepaymentMethod>('元利均等');
+  const [annualIncome, setAnnualIncome] = useState(600);
+  const [borrowerAge, setBorrowerAge] = useState(35);
+  const [otherLoanPayment, setOtherLoanPayment] = useState(0);
+  const [sortBy, setSortBy] = useState<SortBy>('recommended');
 
-  // Slot selections: up to 3 bank ids
   const [homeSlots, setHomeSlots] = useState<string[]>([
     HOME_LOAN_BANKS[0]?.id ?? '',
     HOME_LOAN_BANKS[1]?.id ?? '',
@@ -253,17 +368,25 @@ export default function LoanComparePage() {
   const bankList = mode === 'home' ? HOME_LOAN_BANKS : INVESTMENT_BANKS;
   const colors = mode === 'home' ? HOME_COLORS : INVESTMENT_COLORS;
 
-  // Computed results
   const results = useMemo<LoanResult[]>(() => {
-    return slots
+    const raw = slots
       .filter(id => id !== '')
       .map(id => {
         const bank = bankList.find(b => b.id === id);
         if (!bank) return null;
-        return buildResult(bank, mode === 'home', principal, years, method);
+        return buildResult(bank, mode === 'home', principal, years, method, annualIncome, borrowerAge, otherLoanPayment);
       })
       .filter((r): r is LoanResult => r !== null);
-  }, [slots, bankList, mode, principal, years, method]);
+
+    return [...raw].sort((a, b) => {
+      if (sortBy === 'rate') return a.rate - b.rate;
+      if (sortBy === 'maxLoan') return b.maxBorrowable - a.maxBorrowable;
+      if (sortBy === 'repaymentRatio') return a.repaymentRatio - b.repaymentRatio;
+      // recommended: repaymentOk first, then lowest totalInterest
+      if (a.isRepaymentOk !== b.isRepaymentOk) return a.isRepaymentOk ? -1 : 1;
+      return a.totalInterest - b.totalInterest;
+    });
+  }, [slots, bankList, mode, principal, years, method, annualIncome, borrowerAge, otherLoanPayment, sortBy]);
 
   const minInterestIdx = useMemo(() => {
     if (results.length === 0) return -1;
@@ -274,14 +397,20 @@ export default function LoanComparePage() {
     return minIdx;
   }, [results]);
 
-  // Chart data
-  const chartData = results.map((r, i) => ({
-    name: r.name.replace('銀行', '').replace('ネット', '').replace('（', '\n（').slice(0, 10),
+  // For coloring by original slot order, map bankId -> slot index
+  const slotColorMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    slots.filter(id => id !== '').forEach((id, i) => { map[id] = i; });
+    return map;
+  }, [slots]);
+
+  const chartData = results.map(r => ({
+    name: r.name.replace('銀行', '').replace('ネット', '').slice(0, 10),
     月々返済額: Math.round(r.monthlyPayment),
-    idx: i,
+    審査金利月返済: Math.round(r.auditMonthlyPayment),
+    bankId: r.bankId,
   }));
 
-  // Slot manipulation
   function addSlot() {
     if (slots.length >= 3) return;
     const usedIds = new Set(slots);
@@ -301,8 +430,15 @@ export default function LoanComparePage() {
   }
 
   function handleExportPDF() {
-    exportLoanComparePDF({ mode, principal, years, method, results });
+    exportLoanComparePDF({ mode, principal, years, method, annualIncome, borrowerAge, otherLoanPayment, results });
   }
+
+  const sortOptions: { value: SortBy; label: string }[] = [
+    { value: 'recommended', label: 'おすすめ順' },
+    { value: 'rate', label: '金利順' },
+    { value: 'maxLoan', label: '借入上限順' },
+    { value: 'repaymentRatio', label: '返済比率順' },
+  ];
 
   return (
     <AppShell>
@@ -310,7 +446,7 @@ export default function LoanComparePage() {
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold">金融機関比較シミュレーター</h1>
-          <p className="text-xs text-navy-100">最大3行を並べて月々返済額・総利息を比較</p>
+          <p className="text-xs text-navy-100">最大3行を並べて月々返済額・総利息・返済比率を比較</p>
         </div>
         <button
           onClick={handleExportPDF}
@@ -345,7 +481,6 @@ export default function LoanComparePage() {
             借入条件
           </div>
           <div className="p-4 flex flex-wrap gap-6 items-end">
-            {/* Principal */}
             <div className="flex flex-col gap-1 min-w-[180px]">
               <label className="text-xs font-medium text-neutral-700">借入希望額</label>
               <div className="flex items-center gap-2">
@@ -362,7 +497,6 @@ export default function LoanComparePage() {
               </div>
             </div>
 
-            {/* Years */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-neutral-700">返済期間</label>
               <select
@@ -376,7 +510,6 @@ export default function LoanComparePage() {
               </select>
             </div>
 
-            {/* Repayment method */}
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-neutral-700">返済方式</label>
               <div className="flex gap-3 py-2">
@@ -395,6 +528,62 @@ export default function LoanComparePage() {
                     </span>
                   </label>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Borrower conditions */}
+        <div className="bg-white rounded-xl border border-neutral-100" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="bg-navy-500 text-white font-bold text-sm px-4 py-3 rounded-t-lg">
+            借入者条件
+          </div>
+          <div className="p-4 flex flex-wrap gap-6 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-700">年収</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={annualIncome}
+                  min={100}
+                  max={10000}
+                  step={50}
+                  onChange={e => setAnnualIncome(Number(e.target.value) || 600)}
+                  className="input-cell w-28"
+                />
+                <span className="text-xs text-neutral-400">万円</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-700">年齢</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={borrowerAge}
+                  min={18}
+                  max={70}
+                  step={1}
+                  onChange={e => setBorrowerAge(Number(e.target.value) || 35)}
+                  className="input-cell w-24"
+                />
+                <span className="text-xs text-neutral-400">歳</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-700">他借入年返済額</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={otherLoanPayment}
+                  min={0}
+                  max={5000}
+                  step={10}
+                  onChange={e => setOtherLoanPayment(Number(e.target.value) || 0)}
+                  className="input-cell w-28"
+                />
+                <span className="text-xs text-neutral-400">万円/年</span>
               </div>
             </div>
           </div>
@@ -455,32 +644,29 @@ export default function LoanComparePage() {
         {/* Results */}
         {results.length > 0 && (
           <>
-            {/* Bar chart */}
-            <div className="bg-white rounded-xl border border-neutral-100" style={{ boxShadow: 'var(--shadow-card)' }}>
-              <div className="bg-navy-500 text-white font-bold text-sm px-4 py-3 rounded-t-lg">
-                月々返済額 比較グラフ
-              </div>
-              <div className="p-4">
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} margin={{ top: 8, right: 16, left: 16, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${Math.round(v / 10000)}万`} />
-                    <Tooltip formatter={(v: unknown) => [`${Number(v).toLocaleString()}円`]} />
-                    <Bar dataKey="月々返済額" radius={[4, 4, 0, 0]}>
-                      {chartData.map((entry) => (
-                        <Cell key={`cell-${entry.idx}`} fill={colors[entry.idx] ?? '#1C2B4A'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            {/* Sort controls */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-neutral-500">並び替え:</span>
+              {sortOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSortBy(opt.value)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-semibold transition-colors border ${
+                    sortBy === opt.value
+                      ? 'bg-navy-500 text-white border-navy-500'
+                      : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
 
             {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {results.map((r, i) => {
                 const isCheapest = i === minInterestIdx;
+                const colorIdx = slotColorMap[r.bankId] ?? i;
                 return (
                   <div
                     key={r.bankId}
@@ -497,15 +683,21 @@ export default function LoanComparePage() {
                     <div className="flex items-center gap-2 mb-3">
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: colors[i] ?? '#1C2B4A' }}
+                        style={{ backgroundColor: colors[colorIdx] ?? '#1C2B4A' }}
                       />
                       <h3 className="text-xs font-bold text-navy-500 leading-tight">{r.name}</h3>
                     </div>
+
+                    {/* Monthly payment */}
                     <div className="text-2xl font-bold text-navy-500 tabular-nums">
                       {Math.round(r.monthlyPayment).toLocaleString()}
                       <span className="text-sm font-normal text-neutral-500">円/月</span>
                     </div>
-                    <div className="mt-2 space-y-1 text-xs text-neutral-700">
+                    <div className="text-xs text-neutral-400 mt-0.5">
+                      実行金利 {r.rate.toFixed(3)}%ベース
+                    </div>
+
+                    <div className="mt-3 space-y-1.5 text-xs text-neutral-700">
                       <div className="flex justify-between">
                         <span>総支払額</span>
                         <span className="font-semibold tabular-nums">
@@ -518,16 +710,88 @@ export default function LoanComparePage() {
                           {Math.round(r.totalInterest / 10000).toLocaleString()}万円
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>金利</span>
-                        <span className="font-semibold text-orange-500 tabular-nums">
-                          {r.rate.toFixed(3)}%
+                      <div className="flex justify-between items-center">
+                        <span>返済比率</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-semibold tabular-nums">{r.repaymentRatio.toFixed(1)}%</span>
+                          {r.isRepaymentOk ? (
+                            <span className="bg-success-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">返比内✓</span>
+                          ) : (
+                            <span className="bg-danger-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">返比超過⚠</span>
+                          )}
                         </span>
                       </div>
+                      {r.isHomeLoan && (
+                        <>
+                          <div className="flex justify-between">
+                            <span>借入上限</span>
+                            <span className="font-semibold tabular-nums">
+                              {Math.round(r.maxBorrowable).toLocaleString()}万円
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span>完済年齢</span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="font-semibold tabular-nums">{r.completionAge}歳</span>
+                              {r.isAgeOk ? (
+                                <span className="bg-success-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">OK</span>
+                              ) : (
+                                <span className="bg-danger-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">超過</span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span>前月比金利</span>
+                            <RateTrendBadge current={r.rate} prev={r.prevMonthRate} />
+                          </div>
+                          <div className="flex justify-between">
+                            <span>手数料</span>
+                            <span className="font-semibold text-neutral-600">{r.processingFee}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
               })}
+            </div>
+
+            {/* Bar chart */}
+            <div className="bg-white rounded-xl border border-neutral-100" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="bg-navy-500 text-white font-bold text-sm px-4 py-3 rounded-t-lg">
+                月々返済額 比較グラフ
+              </div>
+              <div className="p-4">
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={chartData} margin={{ top: 8, right: 16, left: 16, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${Math.round(Number(v) / 10000)}万`} />
+                    <Tooltip
+                      formatter={(v: unknown) => [`${Number(v).toLocaleString()}円`]}
+                    />
+                    <Legend />
+                    <Bar dataKey="月々返済額" radius={[4, 4, 0, 0]}>
+                      {chartData.map(entry => (
+                        <Cell
+                          key={`cell-actual-${entry.bankId}`}
+                          fill={colors[slotColorMap[entry.bankId] ?? 0] ?? '#1C2B4A'}
+                        />
+                      ))}
+                    </Bar>
+                    {mode === 'home' && (
+                      <Bar dataKey="審査金利月返済" radius={[4, 4, 0, 0]} opacity={0.45}>
+                        {chartData.map(entry => (
+                          <Cell
+                            key={`cell-audit-${entry.bankId}`}
+                            fill={colors[slotColorMap[entry.bankId] ?? 0] ?? '#1C2B4A'}
+                          />
+                        ))}
+                      </Bar>
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Detail comparison table */}
@@ -586,6 +850,18 @@ export default function LoanComparePage() {
                         ),
                       },
                       {
+                        label: '審査金利',
+                        render: (r: LoanResult) =>
+                          r.isHomeLoan ? (
+                            <span className="tabular-nums text-neutral-600">
+                              {(() => {
+                                const hb = HOME_LOAN_BANKS.find(b => b.id === r.bankId);
+                                return hb ? `${hb.auditRate.toFixed(2)}%` : '—';
+                              })()}
+                            </span>
+                          ) : '—',
+                      },
+                      {
                         label: '返済期間',
                         render: () => <span>{years}年</span>,
                       },
@@ -614,7 +890,60 @@ export default function LoanComparePage() {
                         ),
                       },
                       {
-                        label: '最大借入額',
+                        label: '返済比率',
+                        render: (r: LoanResult) => (
+                          <span className="flex flex-col items-center gap-0.5">
+                            <span className="tabular-nums font-semibold">{r.repaymentRatio.toFixed(1)}%</span>
+                            {r.isRepaymentOk ? (
+                              <span className="bg-success-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">返比内✓</span>
+                            ) : (
+                              <span className="bg-danger-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">返比超過⚠</span>
+                            )}
+                          </span>
+                        ),
+                      },
+                      {
+                        label: '返済比率上限',
+                        render: (r: LoanResult) => {
+                          if (!r.isHomeLoan) return '—';
+                          const hb = HOME_LOAN_BANKS.find(b => b.id === r.bankId);
+                          return hb ? `${hb.repaymentRatioLimit}%` : '—';
+                        },
+                      },
+                      {
+                        label: '借入上限額',
+                        render: (r: LoanResult) =>
+                          r.isHomeLoan
+                            ? `${Math.round(r.maxBorrowable).toLocaleString()}万円`
+                            : '個別審査',
+                      },
+                      {
+                        label: '完済年齢',
+                        render: (r: LoanResult) => (
+                          <span className="flex flex-col items-center gap-0.5">
+                            <span className="tabular-nums font-semibold">{r.completionAge}歳</span>
+                            {r.isAgeOk ? (
+                              <span className="bg-success-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">OK</span>
+                            ) : (
+                              <span className="bg-danger-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">超過</span>
+                            )}
+                          </span>
+                        ),
+                      },
+                      {
+                        label: '前月比金利',
+                        render: (r: LoanResult) =>
+                          r.isHomeLoan ? (
+                            <RateTrendBadge current={r.rate} prev={r.prevMonthRate} />
+                          ) : '—',
+                      },
+                      {
+                        label: '手数料',
+                        render: (r: LoanResult) =>
+                          r.isHomeLoan ? r.processingFee : '個別',
+                      },
+                      {
+                        label: '最大借入額（データ）',
                         render: (r: LoanResult) =>
                           r.isHomeLoan && r.maxLoan > 0
                             ? `${r.maxLoan.toLocaleString()}万円`
