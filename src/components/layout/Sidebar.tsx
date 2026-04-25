@@ -62,7 +62,7 @@ export function Sidebar() {
             return (
               <div
                 key={`section-${idx}`}
-                className="px-4 pt-4 pb-1 text-[10px] font-bold tracking-widest text-navy-300 uppercase"
+                className="pl-3 border-l-2 border-navy-400 mx-4 pt-5 pb-1 text-[11px] font-bold tracking-wider text-navy-200"
               >
                 {item.label}
               </div>

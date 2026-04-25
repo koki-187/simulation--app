@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { AppShell } from '@/components/layout';
+import { useHomeLoanStore, type PrepayEvent } from '@/store/homeLoanStore';
 import {
   AreaChart,
   Area,
@@ -22,14 +23,6 @@ const pct = (n: number) => n.toFixed(1) + '%';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type RateType = '変動' | '固定';
-type PrepayType = '期間短縮' | '返済額軽減';
-
-interface PrepayEvent {
-  id: number;
-  yearAfter: number;
-  amount: number; // 万円
-  type: PrepayType;
-}
 
 // ── Calculation helpers ───────────────────────────────────────────────────────
 function calcPayment(principal: number, annualRate: number, months: number): number {
@@ -107,7 +100,7 @@ function buildSchedule(
         balance -= prepAmt;
 
         if (balance > 0) {
-          if (ev.type === '期間短縮') {
+          if (ev.type === '期間短縮型') {
             let newRemaining: number;
             if (r === 0) {
               newRemaining = Math.ceil(balance / payment);
@@ -223,53 +216,55 @@ function KpiCard({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HomeSimPage() {
-  // Section 1: 物件情報
-  const [propertyPrice, setPropertyPrice] = useState(4500);
-  const [equity, setEquity] = useState(500);
-  const [expenses, setExpenses] = useState(150);
+  // Store state
+  const store = useHomeLoanStore();
+  const {
+    propertyPrice,
+    equity,
+    expenses,
+    rateType,
+    annualRate,
+    termYears,
+    annualIncome,
+    taxRate,
+    deductionEnabled,
+    isNew,
+    entryYear,
+    mgmtFee,
+    showExtras,
+    events,
+  } = store;
+  const setStore = store.set;
 
-  // Section 2: ローン条件
-  const [rateType, setRateType] = useState<RateType>('変動');
-  const [annualRate, setAnnualRate] = useState(0.5);
-  const [termYears, setTermYears] = useState(35);
-
-  // Section 3: 年収・税情報
-  const [annualIncome, setAnnualIncome] = useState(600);
-  const [taxRate, setTaxRate] = useState(20);
-  const [deductionEnabled, setDeductionEnabled] = useState(true);
-  const [isNew, setIsNew] = useState(true);
-  const [entryYear] = useState(2026);
-
-  // Section 4: 繰上げ返済
-  const [events, setEvents] = useState<PrepayEvent[]>([]);
-  const [nextId, setNextId] = useState(1);
-
-  // 月次支出
-  const [mgmtFeeMan, setMgmtFeeMan] = useState(2); // 万円/月
-  const [showMiscCosts, setShowMiscCosts] = useState(true);
+  // showExtras from store drives the misc costs toggle
+  const showMiscCosts = showExtras;
+  const setShowMiscCosts = (v: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? v(showExtras) : v;
+    setStore({ showExtras: next });
+  };
 
   // Derived
-  const loanAmount = Math.max(0, propertyPrice + expenses - equity); // 万円
+  const loanAmount = propertyPrice + expenses - equity; // 万円 (can be negative)
+  const isLoanNegative = loanAmount <= 0;
 
   // Handle rate type switch
   const handleRateTypeSwitch = (t: RateType) => {
-    setRateType(t);
-    setAnnualRate(t === '変動' ? 0.5 : 1.5);
+    setStore({ rateType: t, annualRate: t === '変動' ? 0.5 : 1.5 });
   };
 
   // Auto-suggest tax rate
   const suggestedTaxRate = suggestTaxRate(annualIncome);
 
   // Main simulation
-  const result = useMemo(
-    () => buildSchedule(loanAmount, annualRate, termYears, events),
-    [loanAmount, annualRate, termYears, events],
-  );
+  const result = useMemo(() => {
+    if (loanAmount <= 0) return { rows: [], totalPayment: 0, totalInterest: 0, finalMonth: 0 };
+    return buildSchedule(loanAmount, annualRate, termYears, events);
+  }, [loanAmount, annualRate, termYears, events]);
 
-  const baseResult = useMemo(
-    () => buildSchedule(loanAmount, annualRate, termYears, []),
-    [loanAmount, annualRate, termYears],
-  );
+  const baseResult = useMemo(() => {
+    if (loanAmount <= 0) return { rows: [], totalPayment: 0, totalInterest: 0, finalMonth: 0 };
+    return buildSchedule(loanAmount, annualRate, termYears, []);
+  }, [loanAmount, annualRate, termYears]);
 
   const monthlyPayment = result.rows[0]?.payment ?? 0;
   const totalPayment = result.totalPayment;
@@ -314,6 +309,7 @@ export default function HomeSimPage() {
         deductionRate: 0.7,
         deduction: Math.round(deduction),
         effectiveRepayment: Math.round(effectiveRepayment),
+        effectiveAnnual: Math.round(effectiveRepayment),
       });
     }
 
@@ -327,6 +323,11 @@ export default function HomeSimPage() {
     isNew,
     monthlyPayment,
   ]);
+
+  // deductionTable alias for PDF export
+  const deductionTable = typeof deductionRows !== 'undefined' && 'rows' in deductionRows
+    ? deductionRows.rows
+    : [];
 
   // 金利上昇リスク
   const rateScenarios = useMemo(() => {
@@ -392,7 +393,7 @@ export default function HomeSimPage() {
   }, [events, baseResult, result, loanAmount]);
 
   // 月次支出
-  const mgmtFeeMonthly = mgmtFeeMan * 10000;
+  const mgmtFeeMonthly = mgmtFee * 10000;
   const insuranceMonthly = showMiscCosts ? Math.round((propertyPrice * 10000 * 0.0003) / 12) : 0;
   const propertyTaxMonthly = showMiscCosts
     ? Math.round((propertyPrice * 10000 * 0.014 * 0.7) / 12)
@@ -403,15 +404,18 @@ export default function HomeSimPage() {
   // Prepayment event helpers
   const addEvent = () => {
     if (events.length >= 3) return;
-    setEvents(prev => [
-      ...prev,
-      { id: nextId, yearAfter: 5, amount: 100, type: '期間短縮' },
-    ]);
-    setNextId(n => n + 1);
+    const newEvent: PrepayEvent = {
+      id: String(Date.now()),
+      yearAfter: 5,
+      amount: 100,
+      type: '期間短縮型',
+    };
+    setStore({ events: [...events, newEvent] });
   };
-  const removeEvent = (id: number) => setEvents(prev => prev.filter(e => e.id !== id));
-  const updateEvent = (id: number, patch: Partial<PrepayEvent>) =>
-    setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
+  const removeEvent = (id: string) =>
+    setStore({ events: events.filter(e => e.id !== id) });
+  const updateEvent = (id: string, patch: Partial<PrepayEvent>) =>
+    setStore({ events: events.map(e => (e.id === id ? { ...e, ...patch } : e)) });
 
   // Next month label
   const nextMonth = (() => {
@@ -419,6 +423,104 @@ export default function HomeSimPage() {
     d.setMonth(d.getMonth() + 1);
     return `${d.getFullYear()}年${d.getMonth() + 1}月`;
   })();
+
+  // PDF export
+  async function exportHomeLoanPDF() {
+    const { jsPDF } = await import('jspdf');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('jspdf-autotable');
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const NAVY = [28, 43, 74] as const;
+    const ORANGE = [232, 99, 42] as const;
+
+    // Header
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageW, 20, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica','bold');
+    doc.text('TERASS Housing Loan Simulation Report', 14, 9);
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.text(`Generated: ${new Date().toLocaleDateString('ja-JP')}`, 14, 16);
+
+    let curY = 26;
+
+    // Section 1: Property & Loan Overview
+    doc.setFillColor(...ORANGE);
+    doc.rect(14, curY, 4, 6, 'F');
+    doc.setTextColor(...NAVY);
+    doc.setFontSize(11);
+    doc.setFont('helvetica','bold');
+    doc.text('1. Property & Loan Overview', 20, curY + 4.5);
+    curY += 10;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
+      startY: curY,
+      head: [['Item', 'Value']],
+      body: [
+        ['Property Price', `¥${(propertyPrice * 10000).toLocaleString()}`],
+        ['Equity', `¥${(equity * 10000).toLocaleString()}`],
+        ['Expenses', `¥${(expenses * 10000).toLocaleString()}`],
+        ['Loan Amount', `¥${(loanAmount * 10000).toLocaleString()}`],
+        ['Rate Type', rateType],
+        ['Annual Rate', `${annualRate}%`],
+        ['Term', `${termYears} years`],
+        ['Monthly Payment', `¥${Math.round(result.rows[0]?.payment ?? 0).toLocaleString()}`],
+        ['Total Repayment', `¥${Math.round(result.totalPayment).toLocaleString()}`],
+        ['Total Interest', `¥${Math.round(result.totalInterest).toLocaleString()}`],
+        ['Repayment Ratio', `${repaymentRatio.toFixed(1)}%`],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: NAVY, textColor: [255,255,255], fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8 },
+      margin: { left: 14, right: 14 },
+    });
+    curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+
+    // Section 2: Housing Loan Deduction
+    if (deductionEnabled && curY < 220) {
+      doc.setFillColor(...ORANGE);
+      doc.rect(14, curY, 4, 6, 'F');
+      doc.setTextColor(...NAVY);
+      doc.setFontSize(11);
+      doc.setFont('helvetica','bold');
+      doc.text('2. Housing Loan Tax Deduction (13 years)', 20, curY + 4.5);
+      curY += 10;
+
+      const dedRows = deductionTable.map((r, i) => [
+        `Year ${i+1}`,
+        `¥${Math.round(r.yearEndBalance * 10000).toLocaleString()}`,
+        '0.7%',
+        `¥${Math.round(r.deduction).toLocaleString()}`,
+        `¥${Math.round(r.effectiveAnnual).toLocaleString()}`,
+      ]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: curY,
+        head: [['Year', 'Year-End Balance', 'Rate', 'Deduction', 'Effective Annual Payment']],
+        body: dedRows,
+        theme: 'grid',
+        headStyles: { fillColor: NAVY, textColor: [255,255,255], fontSize: 7, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7 },
+        margin: { left: 14, right: 14 },
+      });
+      curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    }
+
+    // Footer
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 287, pageW, 10, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(7);
+    doc.setFont('helvetica','normal');
+    doc.text('TERASS 住宅ローンシミュレーター — 本資料は試算値であり、投資助言ではありません。', 14, 293);
+    doc.text('Page 1', pageW - 18, 293);
+
+    doc.save(`TERASS_住宅ローン_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.pdf`);
+  }
 
   return (
     <AppShell>
@@ -433,9 +535,17 @@ export default function HomeSimPage() {
               マイホーム購入の月々返済・控除・金利リスクを総合分析
             </p>
           </div>
-          <span className="bg-blue-500 text-white text-xs px-3 py-1 rounded-full shrink-0 mt-0.5">
-            住宅ローン専用
-          </span>
+          <div className="flex items-center gap-2 shrink-0 mt-0.5">
+            <button
+              onClick={exportHomeLoanPDF}
+              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              📄 PDF出力
+            </button>
+            <span className="bg-blue-500 text-white text-xs px-3 py-1 rounded-full">
+              住宅ローン専用
+            </span>
+          </div>
         </div>
       </div>
 
@@ -447,6 +557,16 @@ export default function HomeSimPage() {
         ════════════════════════════════════════════════════════════════ */}
         <div className="space-y-4">
 
+          {/* Reset button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => store.reset()}
+              className="text-xs text-neutral-400 hover:text-danger-500 border border-neutral-200 hover:border-danger-300 px-3 py-1 rounded-lg transition-colors"
+            >
+              リセット
+            </button>
+          </div>
+
           {/* Section 1: 物件情報 */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4 space-y-4">
             <SectionLabel>物件情報</SectionLabel>
@@ -454,7 +574,7 @@ export default function HomeSimPage() {
             <NumberInput
               label="物件価格"
               value={propertyPrice}
-              onChange={setPropertyPrice}
+              onChange={v => setStore({ propertyPrice: v })}
               min={500}
               max={30000}
               step={100}
@@ -463,7 +583,7 @@ export default function HomeSimPage() {
             <NumberInput
               label="自己資金"
               value={equity}
-              onChange={setEquity}
+              onChange={v => setStore({ equity: v })}
               min={0}
               max={10000}
               step={50}
@@ -472,7 +592,7 @@ export default function HomeSimPage() {
             <NumberInput
               label="諸費用"
               value={expenses}
-              onChange={setExpenses}
+              onChange={v => setStore({ expenses: v })}
               min={0}
               max={1000}
               step={10}
@@ -480,17 +600,31 @@ export default function HomeSimPage() {
               hint={`物件価格の概算: ${Math.round(propertyPrice * 0.03)}万円 (3%)`}
             />
 
-            <div className="bg-neutral-50 rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-neutral-500">借入金額（自動計算）</span>
-                <span className="text-base font-extrabold text-navy-500">
-                  {loanAmount.toLocaleString('ja-JP')}万円
-                </span>
+            {isLoanNegative ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">⚠️</span>
+                  <span className="text-xs font-semibold text-red-600">
+                    自己資金が借入必要額を超えています
+                  </span>
+                </div>
+                <p className="text-xs text-red-400 mt-0.5">
+                  物件価格 + 諸費用 − 自己資金
+                </p>
               </div>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                物件価格 + 諸費用 − 自己資金
-              </p>
-            </div>
+            ) : (
+              <div className="bg-neutral-50 rounded-lg p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-medium text-neutral-500">借入金額（自動計算）</span>
+                  <span className="text-base font-extrabold text-navy-500">
+                    {loanAmount.toLocaleString('ja-JP')}万円
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  物件価格 + 諸費用 − 自己資金
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Section 2: ローン条件 */}
@@ -519,7 +653,7 @@ export default function HomeSimPage() {
             <NumberInput
               label={`適用金利 (${rateType})`}
               value={annualRate}
-              onChange={setAnnualRate}
+              onChange={v => setStore({ annualRate: v })}
               min={0.1}
               max={8.0}
               step={0.05}
@@ -528,7 +662,7 @@ export default function HomeSimPage() {
             <NumberInput
               label="借入期間"
               value={termYears}
-              onChange={setTermYears}
+              onChange={v => setStore({ termYears: v })}
               min={5}
               max={50}
               step={1}
@@ -549,8 +683,7 @@ export default function HomeSimPage() {
               label="年収"
               value={annualIncome}
               onChange={v => {
-                setAnnualIncome(v);
-                setTaxRate(suggestTaxRate(v));
+                setStore({ annualIncome: v, taxRate: suggestTaxRate(v) });
               }}
               min={100}
               max={5000}
@@ -560,7 +693,7 @@ export default function HomeSimPage() {
             <NumberInput
               label="所得税率"
               value={taxRate}
-              onChange={setTaxRate}
+              onChange={v => setStore({ taxRate: v })}
               min={5}
               max={45}
               step={1}
@@ -572,7 +705,7 @@ export default function HomeSimPage() {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-neutral-700">住宅ローン控除適用</label>
                 <button
-                  onClick={() => setDeductionEnabled(v => !v)}
+                  onClick={() => setStore({ deductionEnabled: !deductionEnabled })}
                   className={`w-10 h-5 rounded-full transition-colors relative ${
                     deductionEnabled ? 'bg-orange-500' : 'bg-neutral-200'
                   }`}
@@ -593,7 +726,7 @@ export default function HomeSimPage() {
                       {([true, false] as const).map(v => (
                         <button
                           key={v ? 'new' : 'old'}
-                          onClick={() => setIsNew(v)}
+                          onClick={() => setStore({ isNew: v })}
                           className={`flex-1 text-xs py-1.5 rounded-md border font-medium transition-colors ${
                             isNew === v
                               ? 'bg-orange-500 text-white border-orange-500'
@@ -677,7 +810,7 @@ export default function HomeSimPage() {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-neutral-700">方式</label>
                   <div className="flex gap-1">
-                    {(['期間短縮', '返済額軽減'] as const).map(t => (
+                    {(['期間短縮型', '返済額軽減型'] as const).map(t => (
                       <button
                         key={t}
                         onClick={() => updateEvent(ev.id, { type: t })}
@@ -1012,8 +1145,8 @@ export default function HomeSimPage() {
             <div className="mb-3">
               <NumberInput
                 label="管理費・修繕積立（月額）"
-                value={mgmtFeeMan}
-                onChange={setMgmtFeeMan}
+                value={mgmtFee}
+                onChange={v => setStore({ mgmtFee: v })}
                 min={0}
                 max={20}
                 step={0.5}

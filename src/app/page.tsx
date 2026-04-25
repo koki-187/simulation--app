@@ -33,13 +33,49 @@ export default function Dashboard() {
         <ExportBar resultA={resultA} resultB={resultB} />
       </div>
 
-      {/* Getting started banner */}
-      <div className="bg-orange-50 border-b border-orange-200 px-6 py-3 flex items-center gap-3">
-        <span className="text-orange-500 text-lg">📝</span>
-        <span className="text-sm text-orange-700 font-medium">まず「入力フォーム」で物件情報・ローン条件を設定してください。</span>
-        <Link href="/input" className="ml-auto shrink-0 bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-colors">
-          入力フォームへ →
-        </Link>
+      {/* Loan Type Selector */}
+      <div className="p-6 pb-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* 住宅ローン */}
+          <Link href="/home-sim" className="group bg-white rounded-xl border-2 border-blue-200 hover:border-blue-400 p-5 transition-all hover:shadow-md">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl">🏠</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-bold text-navy-500">住宅ローン</h3>
+                  <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">マイホーム</span>
+                </div>
+                <p className="text-xs text-neutral-500 leading-relaxed mb-3">自宅購入のシミュレーション。月々返済額・住宅ローン控除（13年）・金利上昇リスクを分析します。</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {['月々返済額', '住宅ローン控除', '金利リスク', '繰上げ返済'].map(t => (
+                    <span key={t} className="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 rounded">{t}</span>
+                  ))}
+                </div>
+              </div>
+              <span className="text-blue-300 group-hover:text-blue-500 text-xl transition-colors">→</span>
+            </div>
+          </Link>
+
+          {/* 収益用ローン */}
+          <Link href="/input" className="group bg-white rounded-xl border-2 border-orange-200 hover:border-orange-400 p-5 transition-all hover:shadow-md">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl">🏗️</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-bold text-navy-500">収益用ローン</h3>
+                  <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">投資物件</span>
+                </div>
+                <p className="text-xs text-neutral-500 leading-relaxed mb-3">投資用不動産のシミュレーション。家賃収入・キャッシュフロー・売却益・税金を総合分析します。</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {['家賃収入CF', '売却シナリオ', 'CAGR/DSCR', '税引後利回り'].map(t => (
+                    <span key={t} className="bg-orange-50 text-orange-600 text-[10px] px-2 py-0.5 rounded">{t}</span>
+                  ))}
+                </div>
+              </div>
+              <span className="text-orange-300 group-hover:text-orange-500 text-xl transition-colors">→</span>
+            </div>
+          </Link>
+        </div>
       </div>
 
       <div className="p-6 space-y-6">
