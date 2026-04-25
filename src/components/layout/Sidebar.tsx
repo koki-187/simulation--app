@@ -16,6 +16,7 @@ const NAV = [
   { href: '/loan-compare',  label: '金融機関比較',       icon: '🏦' },
   { href: '/funding-plan',  label: '資金計画書',         icon: '📋' },
   { href: '/bank-db',       label: '金融機関DB',         icon: '🗄️' },
+  { href: '/home-loan',    label: '住宅ローン137選',    icon: '🏡' },
 ];
 
 export function Sidebar() {
