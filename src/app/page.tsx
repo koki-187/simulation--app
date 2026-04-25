@@ -1,4 +1,6 @@
 'use client';
+import React from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/layout';
 import { StatBox, ExportBar } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
@@ -29,6 +31,15 @@ export default function Dashboard() {
           <p className="text-navy-100 text-sm mt-0.5">購入・保有・売却のキャッシュフロー総合分析</p>
         </div>
         <ExportBar resultA={resultA} resultB={resultB} />
+      </div>
+
+      {/* Getting started banner */}
+      <div className="bg-orange-50 border-b border-orange-200 px-6 py-3 flex items-center gap-3">
+        <span className="text-orange-500 text-lg">📝</span>
+        <span className="text-sm text-orange-700 font-medium">まず「入力フォーム」で物件情報・ローン条件を設定してください。</span>
+        <Link href="/input" className="ml-auto shrink-0 bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-colors">
+          入力フォームへ →
+        </Link>
       </div>
 
       <div className="p-6 space-y-6">
@@ -114,10 +125,10 @@ export default function Dashboard() {
                 <tr className="bg-neutral-50 border-b border-neutral-200">
                   <th className="px-4 py-2 text-left text-xs text-neutral-400"></th>
                   {[0,1,2].map(i => (
-                    <>
-                      <th key={`a${i}`} className="px-3 py-1.5 text-center text-xs font-semibold text-orange-500">A</th>
-                      <th key={`b${i}`} className="px-3 py-1.5 text-center text-xs font-semibold text-orange-300">B</th>
-                    </>
+                    <React.Fragment key={i}>
+                      <th className="px-3 py-1.5 text-center text-xs font-semibold text-orange-500">A</th>
+                      <th className="px-3 py-1.5 text-center text-xs font-semibold text-orange-300">B</th>
+                    </React.Fragment>
                   ))}
                 </tr>
               </thead>
@@ -133,10 +144,10 @@ export default function Dashboard() {
                       const vA = resultA.saleScenarios[si][row.key] as number;
                       const vB = resultB.saleScenarios[si][row.key] as number;
                       return (
-                        <>
-                          <td key={`va${si}`} className={`px-3 py-2 text-right text-xs font-semibold ${vA >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{row.fmt(vA)}</td>
-                          <td key={`vb${si}`} className={`px-3 py-2 text-right text-xs font-semibold ${vB >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{row.fmt(vB)}</td>
-                        </>
+                        <React.Fragment key={si}>
+                          <td className={`px-3 py-2 text-right text-xs font-semibold ${vA >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{row.fmt(vA)}</td>
+                          <td className={`px-3 py-2 text-right text-xs font-semibold ${vB >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{row.fmt(vB)}</td>
+                        </React.Fragment>
                       );
                     })}
                   </tr>

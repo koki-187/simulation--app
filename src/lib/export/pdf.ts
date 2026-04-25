@@ -1,5 +1,3 @@
-'use client';
-
 import type { SimResult } from '@/lib/calc/types';
 import { yen, pct, cagr } from '@/lib/format';
 

@@ -21,7 +21,7 @@ const NAV = [
 export function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="w-56 min-h-screen bg-navy-500 flex flex-col shrink-0">
+    <aside className="w-56 h-screen sticky top-0 bg-navy-500 flex flex-col shrink-0 overflow-hidden">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-navy-600">
         <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3">
+      <nav className="flex-1 py-3 overflow-y-auto">
         {NAV.map(item => (
           <Link
             key={item.href}

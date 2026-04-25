@@ -1,8 +1,31 @@
 'use client';
+import { useState } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { Section, NumInput } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
-import { yen, pct } from '@/lib/format';
+import { DEFAULT_INPUT_A, DEFAULT_INPUT_B } from '@/lib/calc/simulate';
+
+function Tip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        className="w-4 h-4 rounded-full bg-neutral-200 text-neutral-500 text-xs font-bold flex items-center justify-center hover:bg-orange-100 hover:text-orange-500 transition-colors cursor-help"
+        aria-label="説明"
+      >?</button>
+      {show && (
+        <span className="absolute left-6 top-0 z-50 w-56 bg-navy-500 text-white text-xs rounded-lg px-3 py-2 shadow-lg leading-relaxed pointer-events-none">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
 
 function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
   const { inputA, inputB, resultA, resultB, setInputA, setInputB } = useSimStore();
@@ -19,7 +42,7 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
             <input value={input.propertyName} onChange={e => set({ propertyName: e.target.value })}
               className="input-cell w-48 text-left" />
           </div>
-          <NumInput label="物件価格" value={input.propertyPrice} onChange={v => set({ propertyPrice: v })} fmt="currency" unit="円" />
+          <NumInput label="物件価格" value={input.propertyPrice} onChange={v => set({ propertyPrice: Math.max(1_000_000, Math.min(10_000_000_000, v)) })} fmt="currency" unit="円" />
           <div className="flex items-center gap-2 py-1.5">
             <span className="label-cell flex-1">物件種別</span>
             <select value={input.propertyType} onChange={e => set({ propertyType: e.target.value })}
@@ -38,19 +61,27 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
       </Section>
 
       <Section title="3. ローン条件">
-        <NumInput label="金利（年）" value={input.rate} onChange={v => set({ rate: v })} fmt="percent" step={0.01} />
-        <NumInput label="返済期間" value={input.termYears} onChange={v => set({ termYears: v })} fmt="years" unit="年" />
+        <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-3 py-2 mb-2">
+          💡 金利は変動金利の場合0.5〜2%、固定10年で1〜2%程度。
+          投資用不動産は住宅ローンより高く1.5〜3%が一般的です。
+        </p>
+        <NumInput label="金利（年）" value={input.rate} onChange={v => set({ rate: Math.max(0.001, Math.min(0.20, v)) })} fmt="percent" step={0.01} />
+        <NumInput label="返済期間" value={input.termYears} onChange={v => set({ termYears: Math.max(1, Math.min(50, v)) })} fmt="years" unit="年" />
         <NumInput label="月々返済額（自動）" value={result.monthlyPayment} onChange={() => {}} fmt="currency" unit="円/月" readOnly />
         <NumInput label="総支払額（自動）" value={result.totalPayment} onChange={() => {}} fmt="currency" unit="円" readOnly />
         <NumInput label="総利息（自動）" value={result.totalInterest} onChange={() => {}} fmt="currency" unit="円" readOnly />
       </Section>
 
       <Section title="4. 運用計画">
+        <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-3 py-2 mb-2">
+          💡 <b>空室率</b>: 年間のうち空室になる割合（都心RC=5%, 地方木造=15%が目安）。
+          <b>固都税</b>: 固定資産税＋都市計画税の年額。物件価格の0.15〜0.2%程度。
+        </p>
         <NumInput label="家賃収入（月）" value={input.monthlyRent} onChange={v => set({ monthlyRent: v })} fmt="currency" unit="円/月" />
         <NumInput label="管理費（月）" value={input.managementFee} onChange={v => set({ managementFee: v })} fmt="currency" unit="円/月" />
         <NumInput label="修繕積立金（月）" value={input.repairFund} onChange={v => set({ repairFund: v })} fmt="currency" unit="円/月" />
         <NumInput label="その他費用（月）" value={input.otherExpenses} onChange={v => set({ otherExpenses: v })} fmt="currency" unit="円/月" />
-        <NumInput label="空室率" value={input.vacancyRate} onChange={v => set({ vacancyRate: v })} fmt="percent" step={0.01} />
+        <NumInput label="空室率" value={input.vacancyRate} onChange={v => set({ vacancyRate: Math.max(0, Math.min(0.99, v)) })} fmt="percent" step={0.01} />
         <NumInput label="実効家賃（自動）" value={result.effectiveMonthlyRent} onChange={() => {}} fmt="currency" unit="円/月" readOnly />
         <NumInput label="固都税（年）" value={input.fixedAssetTax} onChange={v => set({ fixedAssetTax: v })} fmt="currency" unit="円/年" />
         <NumInput label="表面利回り（自動）" value={result.ratios.grossYield} onChange={() => {}} fmt="percent" readOnly />
@@ -58,6 +89,11 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
       </Section>
 
       <Section title="5. 減価償却">
+        <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-3 py-2 mb-2">
+          💡 <b>建物割合</b>: 物件価格のうち建物部分の比率（例: RC=60%, 木造=50%）。
+          建物価格 × 割合分が減価償却費として経費計上できます。
+          <b>躯体耐用年数</b>: RC=47年, 木造=22年, 軽鉄=27年, 重鉄=34年。
+        </p>
         <NumInput label="建物割合" value={input.buildingRatio} onChange={v => set({ buildingRatio: v })} fmt="percent" step={0.01} />
         <NumInput label="躯体耐用年数" value={input.structureDepYears} onChange={v => set({ structureDepYears: v })} fmt="years" />
         <NumInput label="設備耐用年数" value={input.equipmentDepYears} onChange={v => set({ equipmentDepYears: v })} fmt="years" />
@@ -65,14 +101,34 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
       </Section>
 
       <Section title="6. 売却・保有">
-        <NumInput label="保有年数" value={input.holdingYears} onChange={v => set({ holdingYears: v })} fmt="years" />
+        <NumInput label="保有年数" value={input.holdingYears} onChange={v => set({ holdingYears: Math.max(1, Math.min(50, v)) })} fmt="years" />
         <NumInput label="年間資産成長率" value={input.growthRate} onChange={v => set({ growthRate: v })} fmt="percent" step={0.001} />
       </Section>
 
       <Section title="7. 年収情報（比率計算用）">
+        <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-3 py-2 mb-2">
+          💡 <b>源泉徴収票</b>: 給与明細の年収（会社員はこちら）。
+          <b>確定申告所得</b>: 確定申告書の所得金額（自営業者・副業ありの方）。
+          年収倍率・返済比率の計算に使用します。
+        </p>
         <NumInput label="年収（源泉徴収票）" value={input.annualIncomeTaxBase} onChange={v => set({ annualIncomeTaxBase: v })} fmt="currency" unit="円/年" />
         <NumInput label="年収（確定申告所得）" value={input.annualIncomeDeclared} onChange={v => set({ annualIncomeDeclared: v })} fmt="currency" unit="円/年" />
       </Section>
+
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('入力値を初期値にリセットしますか？')) {
+              if (pattern === 'A') setInputA(DEFAULT_INPUT_A);
+              else setInputB(DEFAULT_INPUT_B);
+            }
+          }}
+          className="text-xs text-neutral-400 hover:text-danger-500 border border-neutral-200 hover:border-danger-500 px-3 py-1.5 rounded transition-colors"
+        >
+          🔄 初期値にリセット
+        </button>
+      </div>
     </div>
   );
 }
