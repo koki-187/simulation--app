@@ -26,6 +26,59 @@ function detectTags(features, name) {
   return tags;
 }
 
+// エリア自動判定（都道府県 + 全国 + 主要エリア）
+const PREFECTURE_MAP = {
+  '北海道': '北海道・東北',
+  '青森': '北海道・東北', '岩手': '北海道・東北', '宮城': '北海道・東北',
+  '秋田': '北海道・東北', '山形': '北海道・東北', '福島': '北海道・東北',
+  '茨城': '関東', '栃木': '関東', '群馬': '関東',
+  '埼玉': '関東', '千葉': '関東', '東京': '関東', '神奈川': '関東',
+  '新潟': '中部・北陸', '富山': '中部・北陸', '石川': '中部・北陸', '福井': '中部・北陸',
+  '山梨': '中部・北陸', '長野': '中部・北陸', '岐阜': '中部・北陸',
+  '静岡': '中部・北陸', '愛知': '中部・北陸', '三重': '中部・北陸',
+  '滋賀': '近畿', '京都': '近畿', '大阪': '近畿',
+  '兵庫': '近畿', '奈良': '近畿', '和歌山': '近畿',
+  '鳥取': '中国・四国', '島根': '中国・四国', '岡山': '中国・四国',
+  '広島': '中国・四国', '山口': '中国・四国',
+  '徳島': '中国・四国', '香川': '中国・四国', '愛媛': '中国・四国', '高知': '中国・四国',
+  '福岡': '九州・沖縄', '佐賀': '九州・沖縄', '長崎': '九州・沖縄',
+  '熊本': '九州・沖縄', '大分': '九州・沖縄', '宮崎': '九州・沖縄',
+  '鹿児島': '九州・沖縄', '沖縄': '九州・沖縄',
+};
+
+const REGION_GROUPS = ['北海道・東北', '関東', '中部・北陸', '近畿', '中国・四国', '九州・沖縄'];
+
+function detectAreas(features) {
+  const f = features;
+  // 全国対応
+  if (/全国/.test(f)) return ['全国'];
+
+  const regionSet = new Set();
+
+  // 都道府県名でマッチング
+  for (const [pref, region] of Object.entries(PREFECTURE_MAP)) {
+    if (f.includes(pref)) {
+      regionSet.add(region);
+    }
+  }
+
+  // 明示的なエリア表記
+  if (/首都圏|関東/.test(f)) regionSet.add('関東');
+  if (/関西|近畿/.test(f)) regionSet.add('近畿');
+  if (/東海/.test(f)) regionSet.add('中部・北陸');
+  if (/九州/.test(f)) regionSet.add('九州・沖縄');
+  if (/東北/.test(f)) regionSet.add('北海道・東北');
+  if (/北海道/.test(f)) regionSet.add('北海道・東北');
+  if (/四国/.test(f)) regionSet.add('中国・四国');
+  if (/中国地方/.test(f)) regionSet.add('中国・四国');
+
+  // エリア特定なし→全国扱い
+  if (regionSet.size === 0) return ['全国'];
+
+  // 順番を地域グループ順に
+  return REGION_GROUPS.filter(r => regionSet.has(r));
+}
+
 function parseRate(s) {
   if (!s || s.trim() === '') return null;
   return parseFloat(s.replace('%','').trim());
@@ -71,6 +124,7 @@ const banks = rows.map(c => {
   const features = c[10]?.trim() || '';
   const name = c[1]?.trim() || '';
   const tags = detectTags(features, name);
+  const areas = detectAreas(features);
 
   return {
     id: `bank-${c[0]}`,
@@ -84,8 +138,18 @@ const banks = rows.map(c => {
     maxLoan,
     features,
     tags,
+    areas,
   };
 });
+
+// 各エリアのカバー銀行数を出力
+const areaCounts = {};
+for (const b of banks) {
+  for (const a of b.areas) {
+    areaCounts[a] = (areaCounts[a] || 0) + 1;
+  }
+}
+console.log('Area coverage:', areaCounts);
 
 const ts = `// 住宅ローン金融機関データ 137件
 // Source: loan_checker_137banks.csv (2026-04 版)
@@ -99,6 +163,19 @@ export type HomeLoan137Tag =
   | '諸費用込み' | 'おまとめローン' | 'リフォーム費用込'
   | '転職者OK';
 
+export type HomeLoan137Area =
+  | '全国'
+  | '北海道・東北'
+  | '関東'
+  | '中部・北陸'
+  | '近畿'
+  | '中国・四国'
+  | '九州・沖縄';
+
+export const AREA_LABELS: HomeLoan137Area[] = [
+  '全国', '北海道・東北', '関東', '中部・北陸', '近畿', '中国・四国', '九州・沖縄'
+];
+
 export interface HomeLoan137 {
   id: string;
   no: number;
@@ -111,6 +188,7 @@ export interface HomeLoan137 {
   maxLoan: number;           // 万円
   features: string;
   tags: HomeLoan137Tag[];
+  areas: HomeLoan137Area[];  // 対応エリア（地方）
 }
 
 export const HOME_LOAN_137: HomeLoan137[] = ${JSON.stringify(banks, null, 2)};

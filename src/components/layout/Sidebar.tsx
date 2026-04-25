@@ -17,6 +17,7 @@ const NAV = [
   { href: '/funding-plan',  label: '資金計画書',         icon: '📋' },
   { href: '/bank-db',       label: '金融機関DB',         icon: '🗄️' },
   { href: '/home-loan',    label: '住宅ローン137選',    icon: '🏡' },
+  { href: '/prepayment',   label: '繰上げ返済',          icon: '⏩' },
 ];
 
 export function Sidebar() {
