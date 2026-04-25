@@ -40,8 +40,8 @@ export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
   }
 
   function addTable(head: string[][], body: string[][], colWidths?: number[]) {
-    // @ts-expect-error – autoTable is augmented
-    doc.autoTable({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
       startY: curY,
       head,
       body,

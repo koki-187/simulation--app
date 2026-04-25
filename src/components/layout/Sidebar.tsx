@@ -10,9 +10,12 @@ const NAV = [
   { href: '/cashflow',      label: 'キャッシュフロー',   icon: '💰' },
   { href: '/sale',          label: '売却シミュレーション', icon: '🏷️' },
   { href: '/tax',           label: '税金詳細',          icon: '🧾' },
-  { href: '/banks',         label: '金融機関比較',       icon: '🏦' },
+  { href: '/banks',         label: 'ローン比較',         icon: '🏦' },
   { href: '/compare',       label: 'A/B比較',           icon: '⚖️' },
   { href: '/ratios',        label: '年収倍率・返済比率', icon: '📈' },
+  { href: '/loan-compare',  label: '金融機関比較',       icon: '🏦' },
+  { href: '/funding-plan',  label: '資金計画書',         icon: '📋' },
+  { href: '/bank-db',       label: '金融機関DB',         icon: '🗄️' },
 ];
 
 export function Sidebar() {
@@ -21,8 +24,19 @@ export function Sidebar() {
     <aside className="w-56 min-h-screen bg-navy-500 flex flex-col shrink-0">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-navy-600">
-        <div className="text-orange-500 font-bold text-lg leading-tight">TERASS</div>
-        <div className="text-navy-100 text-xs mt-0.5">不動産投資シミュレーター</div>
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/terass-logo.png"
+            alt="TERASS"
+            className="h-7 w-auto object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+          <div>
+            <div className="text-white font-bold text-xl tracking-widest leading-tight">TERASS</div>
+            <div className="text-navy-100 text-xs mt-0.5">不動産投資シミュレーター</div>
+          </div>
+        </div>
       </div>
 
       {/* Nav */}
