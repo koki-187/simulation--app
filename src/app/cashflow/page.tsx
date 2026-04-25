@@ -1,0 +1,81 @@
+'use client';
+import { AppShell, PatternToggle } from '@/components/layout';
+import { useSimStore } from '@/store/simulatorStore';
+import { yen } from '@/lib/format';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+
+export default function CashFlowPage() {
+  const { resultA, resultB, activePattern } = useSimStore();
+  const result = activePattern === 'B' ? resultB : resultA;
+  const rows = result.cashFlows.slice(0, 30);
+
+  const chartData = rows.map(r => ({
+    year: r.year + '年',
+    '運営CF': Math.round(r.operatingCF / 10000),
+    '税引後CF': Math.round(r.afterTaxCF / 10000),
+    '累計CF': Math.round(r.cumulativeCF / 10000),
+  }));
+
+  return (
+    <AppShell>
+      <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
+        <div><h1 className="text-lg font-bold">キャッシュフロー分析</h1><p className="text-xs text-navy-100">30年間の年次収支</p></div>
+        <PatternToggle />
+      </div>
+      <div className="p-6 space-y-6">
+        <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
+          <h3 className="text-sm font-bold text-navy-500 mb-3">年次CF推移（万円）</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
+              <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={4} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={0} stroke="#667085" strokeDasharray="3 3" />
+              <Bar dataKey="運営CF" fill="#1C2B4A" radius={[2,2,0,0]} />
+              <Bar dataKey="税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white rounded-xl border border-neutral-100 shadow-card overflow-hidden">
+          <div className="bg-navy-500 text-white px-4 py-2.5 font-bold text-sm">年次キャッシュフロー詳細</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-neutral-50 border-b border-neutral-200">
+                  {['年','家賃収入','運営費','固都税','運営CF','ローン返済','税前CF','減価償却','課税所得','税金','税引後CF','累計CF','残債'].map(h => (
+                    <th key={h} className="table-header whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const isBreakeven = r.cumulativeCF >= 0 && (rows[i-1]?.cumulativeCF ?? -1) < 0;
+                  return (
+                    <tr key={r.year} className={`${i % 2 === 0 ? 'bg-white' : 'bg-neutral-50'} ${isBreakeven ? 'ring-2 ring-orange-400' : ''}`}>
+                      <td className="px-2 py-1.5 text-center font-medium">{r.year}</td>
+                      <td className="px-2 py-1.5 text-right">{yen(r.rentalIncome)}</td>
+                      <td className="px-2 py-1.5 text-right">{yen(r.managementCosts)}</td>
+                      <td className="px-2 py-1.5 text-right">{yen(r.fixedAssetTax)}</td>
+                      <td className={`px-2 py-1.5 text-right font-semibold ${r.operatingCF >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{yen(r.operatingCF)}</td>
+                      <td className="px-2 py-1.5 text-right">{yen(r.annualLoanPayment)}</td>
+                      <td className={`px-2 py-1.5 text-right font-semibold ${r.preTaxCF >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{yen(r.preTaxCF)}</td>
+                      <td className="px-2 py-1.5 text-right text-neutral-400">{yen(r.depreciation)}</td>
+                      <td className={`px-2 py-1.5 text-right ${r.taxableIncome < 0 ? 'text-success-500' : ''}`}>{yen(r.taxableIncome)}</td>
+                      <td className="px-2 py-1.5 text-right text-danger-500">{yen(r.incomeTax)}</td>
+                      <td className={`px-2 py-1.5 text-right font-bold ${r.afterTaxCF >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{yen(r.afterTaxCF)}</td>
+                      <td className={`px-2 py-1.5 text-right font-bold ${r.cumulativeCF >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{yen(r.cumulativeCF)}</td>
+                      <td className="px-2 py-1.5 text-right text-neutral-500">{yen(r.loanBalance)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
