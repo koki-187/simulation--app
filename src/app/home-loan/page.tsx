@@ -38,18 +38,6 @@ const TAG_COLORS: Record<HomeLoan137Tag, string> = {
   '転職者OK':       'bg-cyan-100 text-cyan-700',
 };
 
-// Area counts for display on buttons
-const AREA_DISPLAY_COUNTS: Record<SelectedArea, number> = {
-  '全エリア': 137,
-  '全国': 89,
-  '関東': 18 + 89,      // includes 全国 banks
-  '近畿': 17 + 89,
-  '中部・北陸': 12 + 89,
-  '北海道・東北': 10 + 89,
-  '九州・沖縄': 8 + 89,
-  '中国・四国': 5 + 89,
-};
-
 // Compute actual area counts from data
 function getAreaCount(area: SelectedArea, banks: HomeLoan137[]): number {
   if (area === '全エリア') return banks.length;
@@ -170,7 +158,10 @@ function BankCard({
       {/* Data rows */}
       <div className="px-4 pb-3 space-y-1.5 flex-1">
         <div className="flex justify-between text-xs">
-          <span className="text-neutral-500">月額返済</span>
+          <div className="flex flex-col">
+            <span className="text-neutral-500">月額返済</span>
+            <span className="text-[10px] text-neutral-400">(3,000万・35年基準)</span>
+          </div>
           <span className="font-semibold text-navy-500">
             {yen(bank.monthlyPayment)}/月
           </span>
@@ -673,7 +664,10 @@ export default function HomeLoanPage() {
                 bank={bank}
                 rank={index + 1}
                 highlighted={
-                  activePresetObj !== null && activePresetObj.filter(bank)
+                  activePreset === null && searchText.trim() !== '' && (
+                    bank.name.toLowerCase().includes(searchText.trim().toLowerCase()) ||
+                    bank.features.toLowerCase().includes(searchText.trim().toLowerCase())
+                  )
                 }
               />
             ))}

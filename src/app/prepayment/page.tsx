@@ -67,14 +67,15 @@ function buildSchedule(
 
   let balance = loanAmount;
   let payment = calcMonthlyPayment(balance, r, totalMonths);
-  let remainingMonths = totalMonths;
+
+  // effectiveEndMonth tracks the expected final payment month (changes for 期間短縮型)
+  let effectiveEndMonth = totalMonths;
 
   const rows: MonthlyRow[] = [];
   let totalPayment = 0;
   let totalInterest = 0;
-  let totalPrincipal = 0;
 
-  for (let m = 1; m <= totalMonths; m++) {
+  for (let m = 1; m <= effectiveEndMonth; m++) {
     if (balance <= 0) break;
 
     const interest = balance * r;
@@ -83,35 +84,37 @@ function buildSchedule(
 
     balance -= principal;
 
-    // Check for prepayment event at this month
+    // Check for ALL prepayment events at this month (Bug 1: use filter, not find)
     let prepaymentAmount = 0;
-    const eventAtMonth = sortedEvents.find(e => e.yearAfter * 12 === m);
-    if (eventAtMonth && balance > 0) {
-      const prepAmt = Math.min(eventAtMonth.amount * 10000, balance);
-      prepaymentAmount = prepAmt;
-      balance -= prepAmt;
+    const eventsAtMonth = sortedEvents.filter(e => e.yearAfter * 12 === m);
+    if (eventsAtMonth.length > 0 && balance > 0) {
+      // Apply each event sequentially (Bug 1)
+      for (const ev of eventsAtMonth) {
+        if (balance <= 0) break;
+        const prepAmt = Math.min(ev.amount * 10000, balance);
+        prepaymentAmount += prepAmt;
+        balance -= prepAmt;
 
-      if (balance > 0) {
-        const monthsElapsed = m;
-        const originalRemaining = totalMonths - monthsElapsed;
-
-        if (eventAtMonth.type === '期間短縮型') {
-          // Recalculate remaining months keeping same payment
-          // remaining months = -ln(1 - r*balance/payment) / ln(1+r)
-          if (r === 0) {
-            remainingMonths = Math.ceil(balance / payment);
-          } else {
-            const ratio = (r * balance) / payment;
-            if (ratio >= 1) {
-              remainingMonths = originalRemaining;
+        if (balance > 0) {
+          if (ev.type === '期間短縮型') {
+            // Bug 2: recalculate remaining months, then update effectiveEndMonth
+            let newRemainingMonths: number;
+            if (r === 0) {
+              newRemainingMonths = Math.ceil(balance / payment);
             } else {
-              remainingMonths = Math.ceil(-Math.log(1 - ratio) / Math.log(1 + r));
+              const ratio = (r * balance) / payment;
+              if (ratio >= 1) {
+                newRemainingMonths = effectiveEndMonth - m;
+              } else {
+                newRemainingMonths = Math.ceil(-Math.log(1 - ratio) / Math.log(1 + r));
+              }
             }
+            effectiveEndMonth = m + newRemainingMonths;
+          } else {
+            // Bug 2: 返済額軽減型 — keep effectiveEndMonth, recalculate payment using remaining months
+            const remaining = Math.max(1, effectiveEndMonth - m);
+            payment = calcMonthlyPayment(balance, r, remaining);
           }
-        } else {
-          // 返済額軽減型: keep same remaining months, recalculate payment
-          remainingMonths = Math.max(1, originalRemaining);
-          payment = calcMonthlyPayment(balance, r, remainingMonths);
         }
       }
     }
@@ -127,7 +130,6 @@ function buildSchedule(
 
     totalPayment += actualPayment + prepaymentAmount;
     totalInterest += interest;
-    totalPrincipal += principal + prepaymentAmount;
 
     if (balance <= 0.5) break;
   }
@@ -201,9 +203,10 @@ export default function PrepaymentPage() {
 
   const addEvent = () => {
     if (events.length >= 5) return;
-    const defaultYear = events.length > 0
-      ? Math.min(49, events[events.length - 1].yearAfter + 5)
-      : 5;
+    const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+    const defaultYear = lastEvent
+      ? Math.min(termYears - 1, lastEvent.yearAfter + 5)
+      : Math.min(termYears - 1, 5);
     setEvents(prev => [
       ...prev,
       { id: nextId, yearAfter: defaultYear, amount: 100, type: '期間短縮型' },
@@ -240,6 +243,10 @@ export default function PrepaymentPage() {
   const savedMonths = baseMonths - prepMonths;
   const savedYears = Math.floor(Math.abs(savedMonths) / 12);
   const savedRemMonths = Math.abs(savedMonths) % 12;
+
+  // Bug 5: detect if all active events are 返済額軽減型 (term doesn't shorten)
+  const allPaymentReductionType =
+    events.length > 0 && events.every(e => e.type === '返済額軽減型');
 
   // Dates
   const startDate = new Date();
@@ -394,13 +401,16 @@ export default function PrepaymentPage() {
                       type="number"
                       value={ev.yearAfter}
                       min={1}
-                      max={49}
+                      max={termYears - 1}
                       step={1}
                       onChange={e => updateEvent(ev.id, { yearAfter: Number(e.target.value) })}
                       className="input-cell"
                     />
                     <span className="text-xs text-neutral-500 shrink-0">年後</span>
                   </div>
+                  {ev.yearAfter >= termYears && (
+                    <span className="text-xs text-amber-500 font-medium">借入期間外のため無効</span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -468,15 +478,20 @@ export default function PrepaymentPage() {
             </div>
             <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
               <p className="text-xs text-neutral-500 mb-1">短縮期間</p>
-              {savedMonths > 0 ? (
+              {allPaymentReductionType ? (
+                <p className="text-lg font-bold text-neutral-400">0ヶ月</p>
+              ) : savedMonths > 0 ? (
                 <p className="text-lg font-bold text-success-500">
                   {savedYears > 0 ? `${savedYears}年` : ''}{savedRemMonths > 0 ? `${savedRemMonths}ヶ月` : ''}
-                  {savedMonths === 0 && '変化なし'}
                 </p>
               ) : (
                 <p className="text-lg font-bold text-neutral-400">変化なし</p>
               )}
-              <p className="text-xs text-neutral-400 mt-1">{Math.abs(savedMonths)}ヶ月短縮</p>
+              {allPaymentReductionType ? (
+                <p className="text-xs text-neutral-400 mt-1">返済額軽減型</p>
+              ) : (
+                <p className="text-xs text-neutral-400 mt-1">{Math.abs(savedMonths)}ヶ月短縮</p>
+              )}
             </div>
             <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
               <p className="text-xs text-neutral-500 mb-1">総利息削減額</p>

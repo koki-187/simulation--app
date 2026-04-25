@@ -49,8 +49,9 @@ const PREFECTURE_MAP = {
 const REGION_GROUPS = ['北海道・東北', '関東', '中部・北陸', '近畿', '中国・四国', '九州・沖縄'];
 
 function detectAreas(features) {
-  const f = features;
-  // 全国対応
+  // 「全国保証」「全国銀行」等の固有名詞を除去してから判定
+  const f = features.replace(/全国保証|全国銀行|全国勤労者福祉/g, '__HOSHO__');
+  // 全国対応（純粋な"全国"が残っている場合）
   if (/全国/.test(f)) return ['全国'];
 
   const regionSet = new Set();
@@ -126,11 +127,16 @@ const banks = rows.map(c => {
   const tags = detectTags(features, name);
   const areas = detectAreas(features);
 
+  // 名称に「固定」が含まれる場合は固定として扱う（CSV誤記対策）
+  const csvType = c[2]?.trim();
+  const nameHasFixed = /固定/.test(name) && !/固定費|固定資産/.test(name);
+  const rateType = (csvType === '固定' || nameHasFixed) ? '固定' : '変動';
+
   return {
     id: `bank-${c[0]}`,
     no: parseInt(c[0]),
     name,
-    rateType: c[2]?.trim() === '固定' ? '固定' : '変動',
+    rateType,
     rate: rate ?? 0,
     prevMonthRate: prevRate ?? null,
     monthlyPayment: parseMoney(c[5]),
@@ -183,7 +189,7 @@ export interface HomeLoan137 {
   rateType: '変動' | '固定';
   rate: number;              // %
   prevMonthRate: number | null;
-  monthlyPayment: number;    // 円 (4000万・35年基準)
+  monthlyPayment: number;    // 円 (3000万・35年基準 ※ローンチェッカー掲載値)
   fee: number;               // 円
   maxLoan: number;           // 万円
   features: string;
