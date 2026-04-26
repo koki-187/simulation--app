@@ -89,11 +89,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-navy-600 text-xs text-navy-100">
-        <div>v3.1 — 住宅ローン対応</div>
-        <div className="mt-0.5 text-navy-200">© 2026 TERASS Inc.</div>
-      </div>
     </aside>
   );
 }
