@@ -23,9 +23,9 @@ async function exportCashflowPDF(rows: CFRow[], input: SimInput) {
 
   (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
     startY: 22,
-    head: [['Year', 'Rental', 'Mgmt Cost', 'Opex CF', 'Loan Pay', 'Tax', 'After-Tax CF', 'Cum CF', 'Loan Bal']],
+    head: [['年', '家賃収入', '運営費', '運営CF', 'ローン返済', '税金', '税引後CF', '累計CF', '残債']],
     body: rows.map(r => [
-      r.year + 'yr',
+      r.year + '年',
       yenFmt(r.rentalIncome), yenFmt(r.managementCosts),
       yenFmt(r.operatingCF), yenFmt(r.annualLoanPayment),
       yenFmt(r.incomeTax), yenFmt(r.afterTaxCF),
@@ -37,7 +37,27 @@ async function exportCashflowPDF(rows: CFRow[], input: SimInput) {
     margin: { left: 10, right: 10 },
   });
 
-  doc.save(`TERASS_CF_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
+  doc.save(`TERASS_CF_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
+}
+
+function exportCashflowCSV(rows: CFRow[], input: SimInput) {
+  const yenNum = (n: number) => Math.round(n);
+  const header = ['年', '家賃収入', '運営費', '固都税', '運営CF', 'ローン返済', '税前CF', '減価償却', '課税所得', '税金', '税引後CF', '累計CF', '残債'];
+  const body = rows.map(r => [
+    r.year, yenNum(r.rentalIncome), yenNum(r.managementCosts), yenNum(r.fixedAssetTax),
+    yenNum(r.operatingCF), yenNum(r.annualLoanPayment), yenNum(r.preTaxCF),
+    yenNum(r.depreciation), yenNum(r.taxableIncome), yenNum(r.incomeTax),
+    yenNum(r.afterTaxCF), yenNum(r.cumulativeCF), yenNum(r.loanBalance),
+  ]);
+  const csv = [header, ...body].map(row => row.join(',')).join('\n');
+  const bom = '﻿'; // UTF-8 BOM for Excel
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `TERASS_CF_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function CashFlowPage() {
@@ -59,6 +79,9 @@ export default function CashFlowPage() {
         <div className="flex items-center gap-3">
           <button onClick={() => exportCashflowPDF(rows, result.input)} className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
             📄 PDF出力
+          </button>
+          <button onClick={() => exportCashflowCSV(rows, result.input)} className="flex items-center gap-1.5 bg-navy-600 hover:bg-navy-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
+            📥 CSV
           </button>
           <PatternToggle />
         </div>
@@ -82,9 +105,9 @@ export default function CashFlowPage() {
 
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card overflow-hidden">
           <div className="bg-navy-500 text-white px-4 py-2.5 font-bold text-sm">年次キャッシュフロー詳細</div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[65vh] overflow-y-auto">
             <table className="w-full text-xs">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-neutral-50 border-b border-neutral-200">
                   {['年','家賃収入','運営費','固都税','運営CF','ローン返済','税前CF','減価償却','課税所得','税金','税引後CF','累計CF','残債'].map(h => (
                     <th key={h} className="table-header whitespace-nowrap">{h}</th>

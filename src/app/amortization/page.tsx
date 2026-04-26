@@ -31,9 +31,9 @@ async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
 
   (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
     startY: 22,
-    head: [['Year', 'Annual Payment', 'Interest', 'Principal', 'Remaining Balance', 'Cum Interest']],
+    head: [['年', '年間返済額', 'うち利息', 'うち元金', '残高', '累計利息']],
     body: annualRows.map(r => [
-      r.year + 'yr',
+      r.year + '年',
       yenFmt(r.totalPayment), yenFmt(r.totalInterest),
       yenFmt(r.totalPrincipal), yenFmt(r.endBalance), yenFmt(r.cumInterest),
     ]),
@@ -43,7 +43,7 @@ async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
     margin: { left: 14, right: 14 },
   });
 
-  doc.save(`TERASS_返済スケジュール_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
+  doc.save(`TERASS_返済スケジュール_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
 }
 
 export default function AmortizationPage() {
