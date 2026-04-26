@@ -2,7 +2,43 @@
 import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { yen } from '@/lib/format';
+import { CFRow, SimInput } from '@/lib/calc/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+
+async function exportCashflowPDF(rows: CFRow[], input: SimInput) {
+  const yenFmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
+  const { jsPDF } = await import('jspdf');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('jspdf-autotable');
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const NAVY: [number, number, number] = [28, 43, 74];
+
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, pageW, 18, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`TERASS Cash Flow Analysis — ${input.propertyName}`, 14, 12);
+
+  (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
+    startY: 22,
+    head: [['Year', 'Rental', 'Mgmt Cost', 'Opex CF', 'Loan Pay', 'Tax', 'After-Tax CF', 'Cum CF', 'Loan Bal']],
+    body: rows.map(r => [
+      r.year + 'yr',
+      yenFmt(r.rentalIncome), yenFmt(r.managementCosts),
+      yenFmt(r.operatingCF), yenFmt(r.annualLoanPayment),
+      yenFmt(r.incomeTax), yenFmt(r.afterTaxCF),
+      yenFmt(r.cumulativeCF), yenFmt(r.loanBalance),
+    ]),
+    theme: 'grid',
+    headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 7 },
+    margin: { left: 10, right: 10 },
+  });
+
+  doc.save(`TERASS_CF_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
+}
 
 export default function CashFlowPage() {
   const { resultA, resultB, activePattern } = useSimStore();
@@ -20,7 +56,12 @@ export default function CashFlowPage() {
     <AppShell>
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
         <div><h1 className="text-lg font-bold">キャッシュフロー分析</h1><p className="text-xs text-navy-100">30年間の年次収支</p></div>
-        <PatternToggle />
+        <div className="flex items-center gap-3">
+          <button onClick={() => exportCashflowPDF(rows, result.input)} className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
+            📄 PDF出力
+          </button>
+          <PatternToggle />
+        </div>
       </div>
       <div className="p-6 space-y-6">
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">

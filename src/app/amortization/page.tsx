@@ -3,6 +3,48 @@ import { useState } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { yen } from '@/lib/format';
+import { SimInput } from '@/lib/calc/types';
+
+type AnnualRow = {
+  year: number;
+  totalPayment: number;
+  totalInterest: number;
+  totalPrincipal: number;
+  endBalance: number;
+  cumInterest: number;
+};
+
+async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
+  const yenFmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
+  const { jsPDF } = await import('jspdf');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('jspdf-autotable');
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const NAVY: [number, number, number] = [28, 43, 74];
+
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, 210, 18, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`TERASS Amortization Schedule — ${input.propertyName}`, 14, 12);
+
+  (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
+    startY: 22,
+    head: [['Year', 'Annual Payment', 'Interest', 'Principal', 'Remaining Balance', 'Cum Interest']],
+    body: annualRows.map(r => [
+      r.year + 'yr',
+      yenFmt(r.totalPayment), yenFmt(r.totalInterest),
+      yenFmt(r.totalPrincipal), yenFmt(r.endBalance), yenFmt(r.cumInterest),
+    ]),
+    theme: 'grid',
+    headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 8 },
+    margin: { left: 14, right: 14 },
+  });
+
+  doc.save(`TERASS_返済スケジュール_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
+}
 
 export default function AmortizationPage() {
   const { resultA, resultB, activePattern } = useSimStore();
@@ -28,6 +70,9 @@ export default function AmortizationPage() {
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
         <div><h1 className="text-lg font-bold">返済スケジュール</h1><p className="text-xs text-navy-100">{result.input.termYears}年 × 12ヶ月 ＝ {result.input.termYears * 12}回</p></div>
         <div className="flex items-center gap-3">
+          <button onClick={() => exportAmortPDF(annualRows, result.input)} className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
+            📄 PDF出力
+          </button>
           <div className="flex gap-1 bg-navy-600 rounded p-1">
             {(['annual','monthly'] as const).map(m => (
               <button key={m} onClick={() => setViewMode(m)} className={`px-3 py-1 text-xs rounded transition-colors ${viewMode === m ? 'bg-orange-500 text-white' : 'text-navy-100 hover:text-white'}`}>

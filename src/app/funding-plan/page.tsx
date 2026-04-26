@@ -5,9 +5,6 @@ import { AppShell } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { yen } from '@/lib/format';
 import { INVESTMENT_BANKS } from '@/lib/data/investmentBanks';
-import jsPDF from 'jspdf';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require('jspdf-autotable');
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
 declare module 'jspdf' {
@@ -61,7 +58,10 @@ interface FundingPlanData {
   createdDate: string;
 }
 
-function exportFundingPlanPDF(data: FundingPlanData): void {
+async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('jspdf-autotable');
   const NAVY = '#1C2B4A';
   const ORANGE = '#E8632A';
   const LIGHT = '#F5F7FA';
@@ -303,7 +303,7 @@ export default function FundingPlanPage() {
   }, [lenderName]);
 
   // ── PDF handler ────────────────────────────────────────────────────────
-  function handleExportPDF(): void {
+  async function handleExportPDF(): Promise<void> {
     exportFundingPlanPDF({
       propertyName,
       location,

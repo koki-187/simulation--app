@@ -76,6 +76,27 @@ export default function Dashboard() {
             </div>
           </Link>
         </div>
+
+        {/* 3-step guide */}
+        <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 mb-6">
+          <div className="text-xs font-bold text-neutral-500 mb-3 uppercase tracking-wider">📋 はじめての方へ — 3ステップで完成</div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { step: '01', icon: '📝', title: '物件情報を入力', desc: '入力フォームで物件価格・金利・家賃を入力', href: '/input', color: 'border-orange-200 bg-orange-50' },
+              { step: '02', icon: '📊', title: '各指標を確認', desc: 'CF分析・返済スケジュール・利回り・売却試算を確認', href: '/cashflow', color: 'border-blue-200 bg-blue-50' },
+              { step: '03', icon: '📄', title: 'PDF出力して提案', desc: '各ページのPDF出力ボタンで資金計画書を作成', href: '/funding-plan', color: 'border-green-200 bg-green-50' },
+            ].map(s => (
+              <Link key={s.step} href={s.href} className={`rounded-lg border-2 ${s.color} p-3 hover:shadow-md transition-all group`}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xl">{s.icon}</span>
+                  <span className="text-[10px] font-bold text-neutral-400">STEP {s.step}</span>
+                </div>
+                <div className="text-sm font-bold text-neutral-700 mb-1">{s.title}</div>
+                <div className="text-xs text-neutral-500 leading-relaxed">{s.desc}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="p-6 space-y-6">
