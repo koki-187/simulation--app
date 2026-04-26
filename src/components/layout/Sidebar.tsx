@@ -60,11 +60,14 @@ export function Sidebar() {
         {NAV.map((item, idx) => {
           if (item.type === 'section') {
             return (
-              <div
-                key={`section-${idx}`}
-                className="pl-3 border-l-2 border-navy-400 mx-4 pt-5 pb-1 text-[11px] font-bold tracking-wider text-navy-200"
-              >
-                {item.label}
+              <div key={`section-${idx}`} className="mx-3 mt-5 mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-navy-400" />
+                  <span className="text-[10px] font-bold tracking-widest uppercase text-orange-400 whitespace-nowrap px-1">
+                    {item.label}
+                  </span>
+                  <div className="h-px flex-1 bg-navy-400" />
+                </div>
               </div>
             );
           }
