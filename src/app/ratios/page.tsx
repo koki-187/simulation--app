@@ -48,6 +48,28 @@ export default function RatiosPage() {
             </div>
           ))}
         </div>
+
+        {/* 用語解説 */}
+        <div className="bg-navy-50 border border-navy-100 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-navy-500 mb-4">📖 用語解説</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            {[
+              { term: '年収倍率', desc: '借入額 ÷ 年収。7倍以下が融資審査の目安。10倍超は厳しいと判断されやすい。' },
+              { term: '返済比率', desc: '年間ローン返済額 ÷ 年収。25%以下が理想。35%超は返済負担が重い水準。' },
+              { term: '表面利回り', desc: '年間家賃収入 ÷ 物件価格。空室・費用を考慮しない単純利回り。4%以上が目安。' },
+              { term: '実質利回り', desc: '（年間家賃 − 諸費用 − 固都税）÷ 物件価格。実際の手残り率。2%以上が目安。' },
+              { term: 'DSCR', desc: 'Debt Service Coverage Ratio（借債返済余力）。運営CF ÷ 年間返済額。1.2倍以上が安全圏。1.0未満は赤字。' },
+              { term: 'CAGR', desc: 'Compound Annual Growth Rate（年平均成長率）。投資元本が毎年何%複利で増えたかを示す。売却益＋累計CFを含む総合リターン。' },
+              { term: '投資倍率', desc: '（税引後売却益 ＋ 累計CF ＋ 初期投資）÷ 初期投資。1.0x以下は元本割れ。2.0x以上が優良。' },
+              { term: '損益分岐点賃料', desc: 'ローン返済・管理費・固都税を合算した最低限必要な月額家賃。現行家賃がこれを下回ると月次赤字。' },
+            ].map(({ term, desc }) => (
+              <div key={term} className="bg-white rounded-lg p-3 border border-neutral-100">
+                <div className="font-bold text-navy-500 mb-1">{term}</div>
+                <div className="text-neutral-600 leading-relaxed">{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </AppShell>
   );

@@ -84,7 +84,7 @@ export default function Dashboard() {
             {[
               { step: '01', icon: '📝', title: '物件情報を入力', desc: '入力フォームで物件価格・金利・家賃を入力', href: '/input', color: 'border-orange-200 bg-orange-50' },
               { step: '02', icon: '📊', title: '各指標を確認', desc: 'CF分析・返済スケジュール・利回り・売却試算を確認', href: '/cashflow', color: 'border-blue-200 bg-blue-50' },
-              { step: '03', icon: '📄', title: 'PDF出力して提案', desc: '各ページのPDF出力ボタンで資金計画書を作成', href: '/funding-plan', color: 'border-green-200 bg-green-50' },
+              { step: '03', icon: '📄', title: 'PDF出力して提案', desc: '各ページのPDF出力ボタンで資金計画書を作成', href: '/funding-plan', color: 'border-success-500 bg-success-50' },
             ].map(s => (
               <Link key={s.step} href={s.href} className={`rounded-lg border-2 ${s.color} p-3 hover:shadow-md transition-all group`}>
                 <div className="flex items-center gap-2 mb-1.5">

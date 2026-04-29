@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { AppShell } from '@/components/layout';
 import { useHomeLoanStore, type PrepayEvent } from '@/store/homeLoanStore';
+import { yen } from '@/lib/format';
 import {
   AreaChart,
   Area,
@@ -17,9 +18,9 @@ import {
 } from 'recharts';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
-const yen = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
+// yen → @/lib/format からimport済み
 const man = (n: number) => Math.round(n / 10000).toLocaleString('ja-JP') + '万円';
-const pct = (n: number) => n.toFixed(1) + '%';
+const pct = (n: number) => n.toFixed(1) + '%'; // 既にパーセント値の数値を受け取る（例: 25.3 → "25.3%"）
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type RateType = '変動' | '固定';
