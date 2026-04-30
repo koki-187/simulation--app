@@ -130,14 +130,13 @@ async function exportSalePDF(
   use5pctRule: boolean,
 ) {
   const { jsPDF } = await import('jspdf');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('jspdf-autotable');
+  const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
-  const NAVY = [28, 43, 74] as const;
-  const ORANGE = [232, 99, 42] as const;
-  const RED   = [220, 38, 38] as const;
-  const GREEN = [34, 197, 94] as const;
+  const NAVY: [number, number, number] = [28, 43, 74];
+  const ORANGE: [number, number, number] = [232, 99, 42];
+  const RED: [number, number, number]   = [220, 38, 38];
+  const GREEN: [number, number, number] = [34, 197, 94];
 
   // Header
   doc.setFillColor(...NAVY);
@@ -193,8 +192,7 @@ async function exportSalePDF(
       ];
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: curY,
       head: [...head, ...subHead],
       body,
@@ -210,7 +208,8 @@ async function exportSalePDF(
         8: { textColor: GREEN },
         9: { textColor: GREEN },
       },
-      didDrawCell: (data: { section: string; row: { index: number }; column: { index: number }; cell: { raw: string } }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      didDrawCell: (data: any) => {
         // Bold star rows
         if (data.section === 'body' && data.column.index === 0) {
           const raw = data.cell.raw as string;
@@ -221,7 +220,8 @@ async function exportSalePDF(
       },
       margin: { left: 14, right: 14 },
     });
-    curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    curY = (doc as any).lastAutoTable.finalY + 8;
 
     if (curY > 170) {
       doc.addPage();

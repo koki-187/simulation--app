@@ -428,12 +428,11 @@ export default function HomeSimPage() {
   // PDF export
   async function exportHomeLoanPDF() {
     const { jsPDF } = await import('jspdf');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('jspdf-autotable');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
-    const NAVY = [28, 43, 74] as const;
-    const ORANGE = [232, 99, 42] as const;
+    const NAVY: [number, number, number] = [28, 43, 74];
+    const ORANGE: [number, number, number] = [232, 99, 42];
 
     // Header
     doc.setFillColor(...NAVY);
@@ -457,8 +456,7 @@ export default function HomeSimPage() {
     doc.text('1. Property & Loan Overview', 20, curY + 4.5);
     curY += 10;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: curY,
       head: [['Item', 'Value']],
       body: [
@@ -479,7 +477,8 @@ export default function HomeSimPage() {
       bodyStyles: { fontSize: 8 },
       margin: { left: 14, right: 14 },
     });
-    curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    curY = (doc as any).lastAutoTable.finalY + 6;
 
     // Section 2: Housing Loan Deduction
     if (deductionEnabled && curY < 220) {
@@ -498,8 +497,7 @@ export default function HomeSimPage() {
         `¥${Math.round(r.deduction).toLocaleString()}`,
         `¥${Math.round(r.effectiveAnnual).toLocaleString()}`,
       ]);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: curY,
         head: [['Year', 'Year-End Balance', 'Rate', 'Deduction', 'Effective Annual Payment']],
         body: dedRows,
@@ -508,7 +506,8 @@ export default function HomeSimPage() {
         bodyStyles: { fontSize: 7 },
         margin: { left: 14, right: 14 },
       });
-      curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      curY = (doc as any).lastAutoTable.finalY + 6;
     }
 
     // Footer

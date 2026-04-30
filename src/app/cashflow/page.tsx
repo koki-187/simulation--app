@@ -8,8 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 async function exportCashflowPDF(rows: CFRow[], input: SimInput) {
   const yenFmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
   const { jsPDF } = await import('jspdf');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('jspdf-autotable');
+  const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const NAVY: [number, number, number] = [28, 43, 74];
@@ -21,7 +20,7 @@ async function exportCashflowPDF(rows: CFRow[], input: SimInput) {
   doc.setFont('helvetica', 'bold');
   doc.text(`TERASS Cash Flow Analysis — ${input.propertyName}`, 14, 12);
 
-  (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
+  autoTable(doc, {
     startY: 22,
     head: [['年', '家賃収入', '運営費', '運営CF', 'ローン返済', '税金', '税引後CF', '累計CF', '残債']],
     body: rows.map(r => [

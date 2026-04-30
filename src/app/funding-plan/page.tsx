@@ -7,12 +7,6 @@ import { yen } from '@/lib/format';
 import { INVESTMENT_BANKS } from '@/lib/data/investmentBanks';
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (opts: Record<string, unknown>) => jsPDF;
-    lastAutoTable: { finalY: number };
-  }
-}
 
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 function calcMonthly(principal: number, annualRate: number, years: number): number {
@@ -60,8 +54,7 @@ interface FundingPlanData {
 
 async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
   const { jsPDF } = await import('jspdf');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('jspdf-autotable');
+  const { default: autoTable } = await import('jspdf-autotable');
   const NAVY = '#1C2B4A';
   const ORANGE = '#E8632A';
   const LIGHT = '#F5F7FA';
@@ -122,7 +115,7 @@ async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
   }
 
   function twoColTable(rows: [string, string][]): void {
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: MARGIN, right: MARGIN },
       tableWidth: CONTENT_W,
@@ -137,7 +130,8 @@ async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
       tableLineColor: '#E0E4EC',
       tableLineWidth: 0.2,
     });
-    y = doc.lastAutoTable.finalY + 4;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    y = (doc as any).lastAutoTable.finalY + 4;
   }
 
   // ── Section 1: 物件情報 ──────────────────────────────────────────────

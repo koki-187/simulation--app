@@ -19,9 +19,6 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import jsPDF from 'jspdf';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require('jspdf-autotable');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -124,9 +121,10 @@ function calcMaxBorrowable(
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 
-function exportLoanComparePDF(params: PDFParams): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const doc = new jsPDF('p', 'mm', 'a4') as any;
+async function exportLoanComparePDF(params: PDFParams): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  const doc = new jsPDF('p', 'mm', 'a4');
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
   const navyRGB: [number, number, number] = [28, 43, 74];
 
@@ -149,7 +147,7 @@ function exportLoanComparePDF(params: PDFParams): void {
   doc.text('借入条件', 14, y);
   y += 6;
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [['項目', '内容']],
     body: [
@@ -164,14 +162,14 @@ function exportLoanComparePDF(params: PDFParams): void {
     margin: { left: 14, right: 14 },
   });
 
-  y = (doc.lastAutoTable?.finalY ?? y + 40) + 8;
+  y = ((doc as any).lastAutoTable?.finalY ?? y + 40) + 8;
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('借入者条件', 14, y);
   y += 6;
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: [['項目', '内容']],
     body: [
@@ -185,7 +183,7 @@ function exportLoanComparePDF(params: PDFParams): void {
     margin: { left: 14, right: 14 },
   });
 
-  y = (doc.lastAutoTable?.finalY ?? y + 40) + 8;
+  y = ((doc as any).lastAutoTable?.finalY ?? y + 40) + 8;
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -224,7 +222,7 @@ function exportLoanComparePDF(params: PDFParams): void {
     r.processingFee,
   ]);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     head: tableHead,
     body: tableBody,
@@ -430,7 +428,7 @@ export default function LoanComparePage() {
   }
 
   function handleExportPDF() {
-    exportLoanComparePDF({ mode, principal, years, method, annualIncome, borrowerAge, otherLoanPayment, results });
+    exportLoanComparePDF({ mode, principal, years, method, annualIncome, borrowerAge, otherLoanPayment, results }).catch(console.error);
   }
 
   const sortOptions: { value: SortBy; label: string }[] = [

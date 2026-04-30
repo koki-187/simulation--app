@@ -3,15 +3,14 @@ import { yen, pct, cagr } from '@/lib/format';
 
 export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
   const { jsPDF } = await import('jspdf');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('jspdf-autotable');
+  const { default: autoTable } = await import('jspdf-autotable');
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
 
-  const NAVY = [28, 43, 74] as const;
-  const ORANGE = [232, 99, 42] as const;
-  const LIGHT = [238, 241, 246] as const;
+  const NAVY: [number, number, number] = [28, 43, 74];
+  const ORANGE: [number, number, number] = [232, 99, 42];
+  const LIGHT: [number, number, number] = [238, 241, 246];
 
   // ── Header bar ──────────────────────────────────────────────────────────────
   doc.setFillColor(...NAVY);
@@ -38,8 +37,7 @@ export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
   }
 
   function addTable(head: string[][], body: string[][], colWidths?: number[]) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: curY,
       head,
       body,
@@ -50,7 +48,8 @@ export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
       margin: { left: 14, right: 14 },
       columnStyles: colWidths ? Object.fromEntries(colWidths.map((w, i) => [i, { cellWidth: w }])) : {},
     });
-    curY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    curY = (doc as any).lastAutoTable.finalY + 6;
   }
 
   // ── 1. Property Overview ─────────────────────────────────────────────────────

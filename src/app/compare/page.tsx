@@ -12,8 +12,7 @@ async function exportComparePDF(
   bWins: number,
 ) {
   const { jsPDF } = await import('jspdf');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('jspdf-autotable');
+  const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const NAVY: [number, number, number] = [28, 43, 74];
   const ORANGE: [number, number, number] = [232, 99, 42];
@@ -31,7 +30,7 @@ async function exportComparePDF(
   const winner = aWins > bWins ? `A (${inputA.propertyName})` : `B (${inputB.propertyName})`;
   doc.text(`Winner: Pattern ${winner} — ${Math.max(aWins, bWins)}/${rows.length} metrics`, 14, 17);
 
-  (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
+  autoTable(doc, {
     startY: 22,
     head: [['指標', `A: ${inputA.propertyName}`, `B: ${inputB.propertyName}`, '優位']],
     body: rows.map(r => [r.label, r.fmtA, r.fmtB, r.betterA ? 'A ◀' : '▶ B']),
@@ -43,7 +42,8 @@ async function exportComparePDF(
       2: { halign: 'right' as const },
       3: { halign: 'center' as const, fontStyle: 'bold' },
     },
-    didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { textColor: number[] } } }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    didParseCell: (data: any) => {
       if (data.section === 'body' && data.column.index === 3) {
         const row = rows[data.row.index];
         if (row) {

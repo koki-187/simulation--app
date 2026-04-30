@@ -17,8 +17,7 @@ type AnnualRow = {
 async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
   const yenFmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
   const { jsPDF } = await import('jspdf');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('jspdf-autotable');
+  const { default: autoTable } = await import('jspdf-autotable');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const NAVY: [number, number, number] = [28, 43, 74];
 
@@ -29,7 +28,7 @@ async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
   doc.setFont('helvetica', 'bold');
   doc.text(`TERASS Amortization Schedule — ${input.propertyName}`, 14, 12);
 
-  (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
+  autoTable(doc, {
     startY: 22,
     head: [['年', '年間返済額', 'うち利息', 'うち元金', '残高', '累計利息']],
     body: annualRows.map(r => [
