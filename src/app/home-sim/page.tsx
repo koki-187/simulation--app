@@ -220,6 +220,7 @@ export default function HomeSimPage() {
   // Store state
   const store = useHomeLoanStore();
   const {
+    propertyName,
     propertyPrice,
     equity,
     expenses,
@@ -440,7 +441,8 @@ export default function HomeSimPage() {
     doc.setTextColor(255,255,255);
     doc.setFontSize(13);
     doc.setFont('helvetica','bold');
-    doc.text('TERASS Housing Loan Simulation Report', 14, 9);
+    const titleName = propertyName ? ` — ${propertyName}` : '';
+    doc.text(`TERASS Housing Loan Simulation Report${titleName}`, 14, 9);
     doc.setFontSize(8);
     doc.setFont('helvetica','normal');
     doc.text(`Generated: ${new Date().toLocaleDateString('ja-JP')}`, 14, 16);
@@ -519,7 +521,8 @@ export default function HomeSimPage() {
     doc.text('TERASS 住宅ローンシミュレーター — 本資料は試算値であり、投資助言ではありません。', 14, 293);
     doc.text('Page 1', pageW - 18, 293);
 
-    doc.save(`TERASS_住宅ローン_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.pdf`);
+    const nameSlug = propertyName ? `_${propertyName}` : '';
+    doc.save(`TERASS_住宅ローン${nameSlug}_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.pdf`);
   }
 
   return (
@@ -532,7 +535,7 @@ export default function HomeSimPage() {
               🏠 住宅ローンシミュレーター
             </h1>
             <p className="text-xs text-navy-100 mt-0.5">
-              マイホーム購入の月々返済・控除・金利リスクを総合分析
+              {propertyName ? propertyName : 'マイホーム購入の月々返済・控除・金利リスクを総合分析'}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 mt-0.5">
@@ -570,6 +573,18 @@ export default function HomeSimPage() {
           {/* Section 1: 物件情報 */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4 space-y-4">
             <SectionLabel>物件情報</SectionLabel>
+
+            {/* 物件名 */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-700">物件名</label>
+              <input
+                type="text"
+                value={propertyName}
+                onChange={e => setStore({ propertyName: e.target.value })}
+                placeholder="例：パークホームズ新宿"
+                className="input-cell text-left"
+              />
+            </div>
 
             <NumberInput
               label="物件価格"

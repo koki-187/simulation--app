@@ -10,6 +10,7 @@ export interface PrepayEvent {
 
 export interface HomeLoanState {
   // 物件情報
+  propertyName: string;
   propertyPrice: number;   // 万円
   equity: number;          // 万円
   expenses: number;        // 万円
@@ -34,6 +35,7 @@ export interface HomeLoanState {
 }
 
 const DEFAULT: Omit<HomeLoanState, 'set' | 'reset'> = {
+  propertyName: '',
   propertyPrice: 4500,
   equity: 500,
   expenses: 150,
