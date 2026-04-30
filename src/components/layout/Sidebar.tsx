@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
+import { memo } from 'react';
 
 type NavItem =
   | { type: 'link'; href: string; label: string; icon: string }
@@ -34,7 +35,7 @@ const NAV: NavItem[] = [
   { type: 'link', href: '/funding-plan', label: '資金計画書',          icon: '📋' },
 ];
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="w-56 h-screen sticky top-0 bg-navy-500 flex flex-col shrink-0 overflow-hidden">
@@ -91,4 +92,4 @@ export function Sidebar() {
 
     </aside>
   );
-}
+});

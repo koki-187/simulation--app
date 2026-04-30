@@ -1,6 +1,7 @@
 'use client';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen, cagr, mult } from '@/lib/format';
 import { balanceAtYear } from '@/lib/calc/mortgage';
 import { SimResult, SimInput, SaleScenario } from '@/lib/calc/types';
@@ -249,7 +250,9 @@ async function exportSalePDF(
 
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function SalePage() {
-  const { resultA, resultB, inputA, inputB } = useSimStore();
+  const { resultA, resultB, inputA, inputB } = useSimStore(
+    useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, inputA: s.inputA, inputB: s.inputB }))
+  );
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>('afterTaxProfit');
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [showPattern, setShowPattern] = useState<'A' | 'B' | 'both'>('A');

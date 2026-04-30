@@ -1,6 +1,7 @@
 'use client';
 import { AppShell } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, cagr, mult } from '@/lib/format';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -59,7 +60,9 @@ async function exportComparePDF(
 }
 
 export default function ComparePage() {
-  const { resultA, resultB, inputA, inputB } = useSimStore();
+  const { resultA, resultB, inputA, inputB } = useSimStore(
+    useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, inputA: s.inputA, inputB: s.inputB }))
+  );
 
   const rows = [
     { label: '物件価格', fmtA: yen(inputA.propertyPrice), fmtB: yen(inputB.propertyPrice), betterA: inputA.propertyPrice <= inputB.propertyPrice },

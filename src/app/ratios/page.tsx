@@ -2,10 +2,13 @@
 import { AppShell, PatternToggle } from '@/components/layout';
 import { StatBox } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, num } from '@/lib/format';
 
 export default function RatiosPage() {
-  const { resultA, resultB, activePattern } = useSimStore();
+  const { resultA, resultB, activePattern } = useSimStore(
+    useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, activePattern: s.activePattern }))
+  );
   const result = activePattern === 'B' ? resultB : resultA;
   const r = result.ratios;
 

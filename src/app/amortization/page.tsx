@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen } from '@/lib/format';
 import { SimInput } from '@/lib/calc/types';
 
@@ -46,7 +47,9 @@ async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
 }
 
 export default function AmortizationPage() {
-  const { resultA, resultB, activePattern } = useSimStore();
+  const { resultA, resultB, activePattern } = useSimStore(
+    useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, activePattern: s.activePattern }))
+  );
   const result = activePattern === 'B' ? resultB : resultA;
   const [viewMode, setViewMode] = useState<'monthly' | 'annual'>('annual');
 

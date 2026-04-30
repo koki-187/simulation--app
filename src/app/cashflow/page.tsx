@@ -1,6 +1,8 @@
 'use client';
+import { useMemo } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen } from '@/lib/format';
 import { CFRow, SimInput } from '@/lib/calc/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -60,16 +62,18 @@ function exportCashflowCSV(rows: CFRow[], input: SimInput) {
 }
 
 export default function CashFlowPage() {
-  const { resultA, resultB, activePattern } = useSimStore();
+  const { resultA, resultB, activePattern } = useSimStore(
+    useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, activePattern: s.activePattern }))
+  );
   const result = activePattern === 'B' ? resultB : resultA;
   const rows = result.cashFlows.slice(0, 30);
 
-  const chartData = rows.map(r => ({
+  const chartData = useMemo(() => rows.map(r => ({
     year: r.year + '年',
     '運営CF': Math.round(r.operatingCF / 10000),
     '税引後CF': Math.round(r.afterTaxCF / 10000),
     '累計CF': Math.round(r.cumulativeCF / 10000),
-  }));
+  })), [rows]);
 
   return (
     <AppShell>

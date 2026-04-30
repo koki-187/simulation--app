@@ -1,23 +1,29 @@
 'use client';
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout';
 import { StatBox, ExportBar } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, yenM, cagr, mult } from '@/lib/format';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 export default function Dashboard() {
-  const { resultA, resultB, inputA, inputB } = useSimStore();
+  const { resultA, resultB, inputA, inputB } = useSimStore(
+    useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, inputA: s.inputA, inputB: s.inputB }))
+  );
 
   // Chart data: annual CF for 20 years
-  const cfData = resultA.cashFlows.slice(0, 20).map((row, i) => ({
-    year: `${row.year}年`,
-    'A 税引後CF': Math.round(row.afterTaxCF / 10000),
-    'B 税引後CF': Math.round(resultB.cashFlows[i]?.afterTaxCF / 10000),
-    'A 累計CF': Math.round(row.cumulativeCF / 10000),
-    'B 累計CF': Math.round(resultB.cashFlows[i]?.cumulativeCF / 10000),
-  }));
+  const cfData = useMemo(() =>
+    resultA.cashFlows.slice(0, 20).map((row, i) => ({
+      year: `${row.year}年`,
+      'A 税引後CF': Math.round(row.afterTaxCF / 10000),
+      'B 税引後CF': Math.round(resultB.cashFlows[i]?.afterTaxCF / 10000),
+      'A 累計CF': Math.round(row.cumulativeCF / 10000),
+      'B 累計CF': Math.round(resultB.cashFlows[i]?.cumulativeCF / 10000),
+    })),
+    [resultA.cashFlows, resultB.cashFlows]
+  );
 
   const saleA = resultA.saleScenarios[1]; // standard
   const saleB = resultB.saleScenarios[1];

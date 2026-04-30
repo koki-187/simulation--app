@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 
 interface StatBoxProps {
   label: string;
@@ -13,7 +13,7 @@ interface StatBoxProps {
   large?: boolean;
 }
 
-export function StatBox({ label, value, unit, sub, positive, negative, warn, icon, large }: StatBoxProps) {
+export const StatBox = memo(function StatBox({ label, value, unit, sub, positive, negative, warn, icon, large }: StatBoxProps) {
   return (
     <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 flex flex-col gap-1">
       <div className="flex items-center gap-2 text-xs text-neutral-500 font-medium">
@@ -34,4 +34,4 @@ export function StatBox({ label, value, unit, sub, positive, negative, warn, ico
       {sub && <div className="text-xs text-neutral-400">{sub}</div>}
     </div>
   );
-}
+});

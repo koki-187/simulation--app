@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { AppShell } from '@/components/layout';
 import { useHomeLoanStore, type PrepayEvent } from '@/store/homeLoanStore';
+import { useShallow } from 'zustand/react/shallow';
 import { yen } from '@/lib/format';
 import {
   AreaChart,
@@ -75,6 +76,14 @@ function buildSchedule(
   const totalMonths = termYears * 12;
   const sorted = [...events].sort((a, b) => a.yearAfter - b.yearAfter);
 
+  // Pre-compute Map for O(1) event lookup per month
+  const eventsByMonth = new Map<number, PrepayEvent[]>();
+  for (const ev of sorted) {
+    const key = ev.yearAfter * 12;
+    if (!eventsByMonth.has(key)) eventsByMonth.set(key, []);
+    eventsByMonth.get(key)!.push(ev);
+  }
+
   let balance = loan;
   let payment = calcPayment(loan, annualRatePct, totalMonths);
   let effectiveEnd = totalMonths;
@@ -92,7 +101,7 @@ function buildSchedule(
     balance -= principal;
 
     let prepaymentAmount = 0;
-    const eventsAtMonth = sorted.filter(e => e.yearAfter * 12 === m);
+    const eventsAtMonth = eventsByMonth.get(m) ?? [];
     if (eventsAtMonth.length > 0 && balance > 0) {
       for (const ev of eventsAtMonth) {
         if (balance <= 0) break;
@@ -218,7 +227,6 @@ function KpiCard({
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HomeSimPage() {
   // Store state
-  const store = useHomeLoanStore();
   const {
     propertyName,
     propertyPrice,
@@ -235,8 +243,29 @@ export default function HomeSimPage() {
     mgmtFee,
     showExtras,
     events,
-  } = store;
-  const setStore = store.set;
+    setStore,
+    reset,
+  } = useHomeLoanStore(
+    useShallow(s => ({
+      propertyName: s.propertyName,
+      propertyPrice: s.propertyPrice,
+      equity: s.equity,
+      expenses: s.expenses,
+      rateType: s.rateType,
+      annualRate: s.annualRate,
+      termYears: s.termYears,
+      annualIncome: s.annualIncome,
+      taxRate: s.taxRate,
+      deductionEnabled: s.deductionEnabled,
+      isNew: s.isNew,
+      entryYear: s.entryYear,
+      mgmtFee: s.mgmtFee,
+      showExtras: s.showExtras,
+      events: s.events,
+      setStore: s.set,
+      reset: s.reset,
+    }))
+  );
 
   // showExtras from store drives the misc costs toggle
   const showMiscCosts = showExtras;
@@ -350,12 +379,18 @@ export default function HomeSimPage() {
     const points = [1, 5, 10, 15, 20, 25, 30, 35].filter(y => y <= termYears);
     if (!points.includes(termYears)) points.push(termYears);
 
+    // Pre-compute cumulative interest once — O(n) instead of O(n*p)
+    const cumInterest: number[] = [];
+    let running = 0;
+    for (const r of baseResult.rows) {
+      running += r.interest;
+      cumInterest.push(running);
+    }
+
     return points.map(year => {
       const monthIdx = year * 12 - 1;
       const row = baseResult.rows[Math.min(monthIdx, baseResult.rows.length - 1)];
-      const cumulativeInterest = baseResult.rows
-        .slice(0, monthIdx + 1)
-        .reduce((sum, r) => sum + r.interest, 0);
+      const cumulativeInterest = cumInterest[monthIdx] ?? 0;
       return {
         year,
         残高: Math.round((row?.balance ?? 0) / 10000),
@@ -563,7 +598,7 @@ export default function HomeSimPage() {
           {/* Reset button */}
           <div className="flex justify-end">
             <button
-              onClick={() => store.reset()}
+              onClick={() => reset()}
               className="text-xs text-neutral-400 hover:text-danger-500 border border-neutral-200 hover:border-danger-300 px-3 py-1 rounded-lg transition-colors"
             >
               リセット
