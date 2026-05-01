@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { AppShell } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -63,6 +64,7 @@ export default function ComparePage() {
   const { resultA, resultB, inputA, inputB } = useSimStore(
     useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, inputA: s.inputA, inputB: s.inputB }))
   );
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const rows = [
     { label: '物件価格', fmtA: yen(inputA.propertyPrice), fmtB: yen(inputB.propertyPrice), betterA: inputA.propertyPrice <= inputB.propertyPrice },
@@ -111,10 +113,16 @@ export default function ComparePage() {
           <p className="text-xs text-navy-100">全指標の横断比較</p>
         </div>
         <button
-          onClick={() => exportComparePDF(rows, inputA, inputB, aWins, bWins)}
-          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+          onClick={async () => {
+            setPdfLoading(true);
+            try { await exportComparePDF(rows, inputA, inputB, aWins, bWins); }
+            catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
+            finally { setPdfLoading(false); }
+          }}
+          disabled={pdfLoading}
+          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
         >
-          📄 PDF出力
+          {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
         </button>
       </div>
       <div className="p-6 space-y-6">

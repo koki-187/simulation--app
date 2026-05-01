@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -67,6 +67,7 @@ export default function CashFlowPage() {
   );
   const result = activePattern === 'B' ? resultB : resultA;
   const rows = result.cashFlows.slice(0, 30);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const chartData = useMemo(() => rows.map(r => ({
     year: r.year + '年',
@@ -80,8 +81,17 @@ export default function CashFlowPage() {
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
         <div><h1 className="text-lg font-bold">キャッシュフロー分析</h1><p className="text-xs text-navy-100">30年間の年次収支</p></div>
         <div className="flex items-center gap-3">
-          <button onClick={() => exportCashflowPDF(rows, result.input)} className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
-            📄 PDF出力
+          <button
+            onClick={async () => {
+              setPdfLoading(true);
+              try { await exportCashflowPDF(rows, result.input); }
+              catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
+              finally { setPdfLoading(false); }
+            }}
+            disabled={pdfLoading}
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+          >
+            {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
           </button>
           <button onClick={() => exportCashflowCSV(rows, result.input)} className="flex items-center gap-1.5 bg-navy-600 hover:bg-navy-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
             📥 CSV

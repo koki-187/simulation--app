@@ -52,6 +52,7 @@ export default function AmortizationPage() {
   );
   const result = activePattern === 'B' ? resultB : resultA;
   const [viewMode, setViewMode] = useState<'monthly' | 'annual'>('annual');
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const rows = result.amortization;
   // Annual summary
@@ -72,8 +73,17 @@ export default function AmortizationPage() {
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
         <div><h1 className="text-lg font-bold">返済スケジュール</h1><p className="text-xs text-navy-100">{result.input.termYears}年 × 12ヶ月 ＝ {result.input.termYears * 12}回</p></div>
         <div className="flex items-center gap-3">
-          <button onClick={() => exportAmortPDF(annualRows, result.input)} className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
-            📄 PDF出力
+          <button
+            onClick={async () => {
+              setPdfLoading(true);
+              try { await exportAmortPDF(annualRows, result.input); }
+              catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
+              finally { setPdfLoading(false); }
+            }}
+            disabled={pdfLoading}
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+          >
+            {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
           </button>
           <div className="flex gap-1 bg-navy-600 rounded p-1">
             {(['annual','monthly'] as const).map(m => (

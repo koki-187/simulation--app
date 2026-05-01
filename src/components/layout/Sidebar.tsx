@@ -26,6 +26,7 @@ const NAV: NavItem[] = [
   { type: 'link', href: '/home-sim',     label: '住宅ローン計算機',    icon: '🏠' },
   { type: 'link', href: '/home-loan',    label: '金融機関137選',       icon: '🏡' },
   { type: 'link', href: '/prepayment',   label: '繰上げ返済',          icon: '⏩' },
+  { type: 'link', href: '/refinance',    label: '借り換え比較',        icon: '🔄' },
   { type: 'link', href: '/partner-banks',label: '提携銀行ガイド',      icon: '🤝' },
 
   // ── 共通ツール ────────────────────────────────
@@ -35,10 +36,10 @@ const NAV: NavItem[] = [
   { type: 'link', href: '/funding-plan', label: '資金計画書',          icon: '📋' },
 ];
 
-export const Sidebar = memo(function Sidebar() {
+export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   return (
-    <aside className="w-56 h-screen sticky top-0 bg-navy-500 flex flex-col shrink-0 overflow-hidden">
+    <aside className="w-56 h-screen bg-navy-500 flex flex-col shrink-0 overflow-hidden">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-navy-600">
         <div className="flex items-center gap-2">
@@ -76,6 +77,7 @@ export const Sidebar = memo(function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={clsx(
                 'flex items-center gap-3 px-4 py-2 text-sm transition-colors',
                 pathname === item.href
