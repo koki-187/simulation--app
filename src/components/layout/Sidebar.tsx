@@ -9,6 +9,10 @@ type NavItem =
   | { type: 'section'; label: string };
 
 const NAV: NavItem[] = [
+  // ── はじめに ──────────────────────────────────
+  { type: 'section', label: 'はじめに' },
+  { type: 'link', href: '/guide',       label: '使い方ガイド',        icon: '📖' },
+
   // ── 収益用ローン ──────────────────────────────
   { type: 'section', label: '収益用ローン' },
   { type: 'link', href: '/',             label: 'ダッシュボード',      icon: '📊' },
