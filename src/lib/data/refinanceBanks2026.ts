@@ -270,14 +270,14 @@ export const REFINANCE_BANKS_2026: RefinanceBank2026[] = [
     maxLTV: 1.0,
     minAnnualIncome: 1_000_000,
     maxBorrowerAge: 70,
-    notes: '5年ルール・1.25倍ルールあり（元利均等の場合）。一部繰上：マイゲート経由無料。全額繰上：窓口/テレビ電話11,000円（変動金利）。最低借入50万円から。事務手数料：融資額×2.2%+55,000円（またはフラット型）。金利見直し：4月・10月（半年ごと）。',
+    notes: '5年ルール・1.25倍ルールあり（元利均等の場合）。一部繰上：マイゲート経由無料。全額繰上：マイゲート（オンライン）無料・窓口/テレビ電話11,000円（変動金利）。最低借入50万円から。事務手数料：融資額×2.2%（+別途55,000円がかかるプランあり）。金利見直し：4月・10月（半年ごと）。',
     dansin: '一般団信',
     applyDays: 45,
     has5YearRule: true,
     has125Rule: true,
     rateRevision: '半年',
     prepaymentFeePartial: 0,
-    prepaymentFeeFull: 11_000,
+    prepaymentFeeFull: 0,
   },
 ];
 

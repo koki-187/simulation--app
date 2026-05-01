@@ -1,5 +1,5 @@
 'use client';
-import { memo, useMemo, useState } from 'react';
+import { Fragment, memo, useMemo, useState } from 'react';
 import { AppShell } from '@/components/layout';
 import { useShallow } from 'zustand/react/shallow';
 import { useRefinanceStore } from '@/store/refinanceStore';
@@ -165,6 +165,10 @@ export default function RefinancePage() {
     setRefreshResult(null);
     try {
       const res = await fetch('/api/refresh-rates', { method: 'POST' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`サーバーエラー (${res.status}): ${text.slice(0, 100)}`);
+      }
       const data = await res.json();
       if (!data.success) throw new Error(data.error ?? '更新に失敗しました');
       // Only update rates that passed validation (non-null values)
@@ -172,9 +176,11 @@ export default function RefinancePage() {
       for (const [k, v] of Object.entries(data.rates as Record<string, unknown>)) {
         if (typeof v === 'number' && v > 0) validRates[k] = v;
       }
+      // Use getState() to avoid stale closure when merging rates
+      const currentRates = useRefinanceStore.getState().refreshedRates;
       set({
         rateDataMonth: data.month,
-        refreshedRates: { ...refreshedRates, ...validRates },
+        refreshedRates: { ...currentRates, ...validRates },
         refreshDataDate: data.updatedAt,
       });
       setRefreshResult({ foundCount: data.foundCount, total: data.totalBanks });
@@ -608,9 +614,8 @@ export default function RefinancePage() {
                         const isExpanded = expandedBankId === r.bankId;
                         const hasMinLoanWarning = bankData && currentBalance < bankData.minLoanAmount;
                         return (
-                          <>
+                          <Fragment key={r.bankId}>
                             <tr
-                              key={r.bankId}
                               onClick={() => {
                                 set({ selectedBankId: r.bankId });
                                 setExpandedBankId(expandedBankId === r.bankId ? null : r.bankId);
@@ -696,7 +701,7 @@ export default function RefinancePage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tbody>
