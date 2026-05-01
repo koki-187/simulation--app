@@ -10,6 +10,7 @@ export interface RefinanceState {
   currentBank: string;        // 現行銀行名 default: '楽天銀行'
   // 借り換えコスト追加
   registrationFee: number;    // 抵当権設定・抹消費用 (円) default: 150000
+  autoRegistrationFee: boolean; // true = 残債から自動計算
   otherFees: number;          // その他費用 (円) default: 0
   // UI状態
   selectedBankId: string | null;
@@ -27,6 +28,7 @@ const DEFAULT: Omit<RefinanceState, 'set'> = {
   prepaymentPenalty: 0,
   currentBank: '楽天銀行',
   registrationFee: 150000,
+  autoRegistrationFee: true,
   otherFees: 0,
   selectedBankId: null,
   areaFilter: '全エリア',

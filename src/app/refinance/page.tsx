@@ -1,20 +1,79 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { AppShell } from '@/components/layout';
 import { useShallow } from 'zustand/react/shallow';
 import { useRefinanceStore } from '@/store/refinanceStore';
 import { REFINANCE_BANKS_2026, calcProcessingFee } from '@/lib/data/refinanceBanks2026';
-import { calcRefinance, type RefinanceResult } from '@/lib/calc/refinance';
+import {
+  calcRefinance,
+  estimateRegistrationFee,
+  checkThreeConditions,
+  calcRefinanceScenario,
+  type RefinanceResult,
+  type RefinanceInput,
+} from '@/lib/calc/refinance';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, AreaChart, Area
+  ResponsiveContainer, ReferenceLine, AreaChart, Area, Legend,
 } from 'recharts';
 
-const yenM = (n: number) => (n / 10000).toFixed(0) + '万円';
-const pct = (n: number) => n.toFixed(3) + '%';
+const yenM = (n: number) => {
+  const m = Math.round(n / 10000);
+  return m.toLocaleString('ja-JP') + '万円';
+};
+const pct = (n: number) => (n % 1 === 0 ? n.toFixed(0) : n.toFixed(3)) + '%';
+
+async function exportRefinancePDF(
+  results: RefinanceResult[],
+  input: RefinanceInput,
+  currentBank: string
+) {
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const NAVY: [number, number, number] = [28, 43, 74];
+  const pageW = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, pageW, 18, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TERASS 借り換えシミュレーション結果', 14, 12);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(
+    `現行: ${currentBank} / 残債 ${yenM(input.currentBalance)} / 金利 ${pct(input.currentRate)} / 残${input.remainingYears}年`,
+    14,
+    17
+  );
+
+  autoTable(doc, {
+    startY: 22,
+    head: [['銀行名', '金利', '月削減額', '事務手数料', '総費用', '損益分岐', '総節約額（費用後）', '評価']],
+    body: results.slice(0, 15).map(r => [
+      r.bankName,
+      pct(r.newRate),
+      yenM(r.monthlySavings),
+      yenM(r.processingFee),
+      yenM(r.totalCost),
+      r.breakEvenMonths === Infinity ? '—' : r.breakEvenMonths + 'ヶ月',
+      yenM(r.totalSavingsAll),
+      r.isWorthwhile ? '◎' : '△',
+    ]),
+    theme: 'grid',
+    headStyles: { fillColor: NAVY, textColor: [255, 255, 255] as [number, number, number], fontSize: 7, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 7 },
+    margin: { left: 10, right: 10 },
+  });
+
+  const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
+  doc.save(`TERASS_借り換え比較_${dateStr}.pdf`);
+}
 
 function NumberInput({
-  label, value, onChange, min, max, step, unit, hint, readOnly
+  label, value, onChange, min, max, step, unit, hint, readOnly,
 }: {
   label: string; value: number; onChange?: (v: number) => void;
   min?: number; max?: number; step?: number;
@@ -38,35 +97,50 @@ function NumberInput({
   );
 }
 
-function ScoreBar({ value, max = 5 }: { value: number; max?: number }) {
-  const filled = Math.round(value);
+const StarRating = memo(function StarRating({ score, max = 5 }: { score: number; max?: number }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-0.5 justify-center">
       {Array.from({ length: max }).map((_, i) => (
-        <div key={i} className={`w-3 h-3 rounded-sm ${i < filled ? 'bg-orange-500' : 'bg-neutral-200'}`} />
+        <span key={i} className={`text-sm ${i < score ? 'text-orange-400' : 'text-neutral-200'}`}>★</span>
       ))}
     </div>
   );
-}
+});
+
+const ThreeConditionBadge = memo(function ThreeConditionBadge({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border ${ok ? 'bg-success-50 border-success-200 text-success-600' : 'bg-neutral-50 border-neutral-200 text-neutral-400'}`}>
+      <span>{ok ? '✅' : '❌'}</span>
+      <span>{label}</span>
+    </div>
+  );
+});
 
 export default function RefinancePage() {
   const {
     currentBalance, currentRate, remainingYears, prepaymentPenalty,
-    currentBank, registrationFee, otherFees,
+    currentBank, registrationFee, autoRegistrationFee, otherFees,
     selectedBankId, rateTypeFilter, sortBy, set,
   } = useRefinanceStore(
     useShallow(s => ({
       currentBalance: s.currentBalance, currentRate: s.currentRate,
       remainingYears: s.remainingYears, prepaymentPenalty: s.prepaymentPenalty,
       currentBank: s.currentBank, registrationFee: s.registrationFee,
+      autoRegistrationFee: s.autoRegistrationFee,
       otherFees: s.otherFees, selectedBankId: s.selectedBankId,
       rateTypeFilter: s.rateTypeFilter, sortBy: s.sortBy, set: s.set,
     }))
   );
 
   const [showAllBanks, setShowAllBanks] = useState(false);
+  const [scenarioDelta, setScenarioDelta] = useState(0);
+  const [expandedBankId, setExpandedBankId] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
-  // Use 2026 bank data; showAllBanks = include banks with rate >= current rate (for reference)
+  const effectiveRegistrationFee = autoRegistrationFee
+    ? estimateRegistrationFee(currentBalance)
+    : registrationFee;
+
   const eligibleBanks = useMemo(() =>
     REFINANCE_BANKS_2026.filter(b =>
       (rateTypeFilter === 'all' || b.rateType === rateTypeFilter) &&
@@ -75,7 +149,14 @@ export default function RefinancePage() {
     [showAllBanks, rateTypeFilter, currentRate]
   );
 
-  const input = { currentBalance, currentRate, remainingYears, prepaymentPenalty, registrationFee, otherFees };
+  const input: RefinanceInput = {
+    currentBalance,
+    currentRate,
+    remainingYears,
+    prepaymentPenalty,
+    registrationFee: effectiveRegistrationFee,
+    otherFees,
+  };
 
   const results: RefinanceResult[] = useMemo(() =>
     eligibleBanks.map(b => {
@@ -88,27 +169,51 @@ export default function RefinancePage() {
       return a.processingFee - b_.processingFee;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eligibleBanks, currentBalance, currentRate, remainingYears, prepaymentPenalty, registrationFee, otherFees, sortBy]
+    [eligibleBanks, currentBalance, currentRate, remainingYears, prepaymentPenalty, effectiveRegistrationFee, otherFees, sortBy]
+  );
+
+  const scenarioResults = useMemo(() =>
+    scenarioDelta > 0
+      ? results.map(r => ({ ...r, scenario: calcRefinanceScenario(r, input, scenarioDelta) }))
+      : results.map(r => ({ ...r, scenario: null })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [results, scenarioDelta]
   );
 
   const selectedResult = results.find(r => r.bankId === selectedBankId) ?? results[0] ?? null;
   const months = remainingYears * 12;
+  const bestResult = results[0];
 
-  // Chart data: cumulative savings over time
+  const bestConditions = bestResult
+    ? checkThreeConditions(currentRate, bestResult.newRate, remainingYears, currentBalance)
+    : null;
+
+  const conditionsOkCount = bestConditions
+    ? [bestConditions.rateDiffOk, bestConditions.remainingYearsOk, bestConditions.balanceOk].filter(Boolean).length
+    : 0;
+
+  // Chart data: cumulative savings over time (base + scenario)
   const chartData = useMemo(() => {
     if (!selectedResult) return [];
+    const selectedScenario = scenarioDelta > 0
+      ? calcRefinanceScenario(selectedResult, input, scenarioDelta)
+      : null;
     return Array.from({ length: Math.min(months, 360) }, (_, i) => {
       const m = i + 1;
-      const grossSaving = selectedResult.monthlySavings * m;
-      const netSaving = grossSaving - selectedResult.totalCost;
-      return {
+      const netSaving = selectedResult.monthlySavings * m - selectedResult.totalCost;
+      const entry: Record<string, number> = {
         month: m,
-        year: (m / 12).toFixed(1),
-        '累計節約額（費用差引後）': Math.round(netSaving),
-        '損益分岐': 0,
+        '累計節約額（ベース）': Math.round(netSaving),
       };
+      if (selectedScenario) {
+        entry['累計節約額（金利上昇シナリオ）'] = Math.round(
+          selectedScenario.newMonthlySavings * m - selectedResult.totalCost
+        );
+      }
+      return entry;
     }).filter(d => d.month % 6 === 0 || d.month === 1);
-  }, [selectedResult, months]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedResult, months, scenarioDelta]);
 
   const currentMonthly = useMemo(() => {
     if (currentRate <= 0 || currentBalance <= 0 || remainingYears <= 0) return 0;
@@ -122,43 +227,74 @@ export default function RefinancePage() {
     return currentMonthly * remainingYears * 12 - currentBalance;
   }, [currentMonthly, remainingYears, currentBalance]);
 
-  const bestResult = results[0];
-  const rateDiff = bestResult ? (currentRate - bestResult.newRate).toFixed(3) : '0';
-
-  // Score for each result (1-5 stars)
   const getScore = (r: RefinanceResult): number => {
     if (!r.isWorthwhile) return 1;
-    if (r.breakEvenMonths <= 24) return 5;
-    if (r.breakEvenMonths <= 48) return 4;
+    const savingScore = r.totalSavingsAll > 5_000_000 ? 2 : r.totalSavingsAll > 2_000_000 ? 1 : 0;
+    if (r.breakEvenMonths <= 24) return Math.min(5, 4 + savingScore);
+    if (r.breakEvenMonths <= 48) return Math.min(4, 3 + savingScore);
     if (r.breakEvenMonths <= 72) return 3;
     return 2;
   };
 
+  const dansinIcon = (dansin: string) => {
+    if (dansin === 'がん100%無料') return '🩺';
+    if (dansin === 'がん50%無料') return '💊';
+    if (dansin === '充実団信') return '🛡️';
+    return '';
+  };
+
+  const autoFeeBreakdown = useMemo(() => {
+    const mortgageTax = Math.floor(currentBalance * 0.004);
+    const judicialScrivener = 70_000;
+    const stampDuty = currentBalance >= 10_000_000 ? 20_000 : 10_000;
+    const cancellation = 2_000;
+    return { mortgageTax, judicialScrivener, stampDuty, cancellation };
+  }, [currentBalance]);
+
   return (
     <AppShell>
-      <div className="bg-navy-500 text-white px-6 py-4">
-        <h1 className="text-lg font-bold">🔄 借り換えシミュレーター</h1>
-        <p className="text-xs text-navy-100 mt-0.5">
-          現在のローンを見直して、最適な借り換え先を比較・試算します
-        </p>
+      {/* Header */}
+      <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold">🔄 借り換えシミュレーター</h1>
+          <p className="text-xs text-navy-100 mt-0.5">現在のローンを見直して、最適な借り換え先を比較・試算します</p>
+        </div>
+        <button
+          onClick={async () => {
+            setPdfLoading(true);
+            try {
+              await exportRefinancePDF(results, input, currentBank);
+            } catch (e) {
+              console.error(e);
+              alert('PDF出力エラー');
+            } finally {
+              setPdfLoading(false);
+            }
+          }}
+          disabled={pdfLoading || results.length === 0}
+          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+        >
+          {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
+        </button>
       </div>
 
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
 
-        {/* KPI Alert Banner */}
-        {bestResult && bestResult.isWorthwhile && (
-          <div className="bg-success-50 border border-success-500 rounded-xl p-4 flex items-start gap-4">
-            <span className="text-2xl">💡</span>
-            <div>
-              <p className="font-bold text-success-500 text-sm">
-                {bestResult.bankName.slice(0, 20)} に借り換えると…
-              </p>
-              <p className="text-sm text-neutral-700 mt-0.5">
-                月々 <span className="font-bold text-success-500">{yenM(bestResult.monthlySavings)}</span> の削減、
-                残期間合計で <span className="font-bold text-success-500">{yenM(bestResult.totalSavingsAll)}</span> の節約。
-                損益分岐点は <span className="font-bold text-navy-500">{bestResult.breakEvenMonths}ヶ月後</span>。
-              </p>
+        {/* 3-conditions check banner */}
+        {bestConditions && (
+          <div className="bg-white border border-neutral-200 rounded-xl p-4">
+            <div className="flex flex-wrap gap-2 mb-2">
+              <ThreeConditionBadge ok={bestConditions.rateDiffOk} label={`金利差 ${bestConditions.rateDiff.toFixed(3)}% (目安0.3%以上)`} />
+              <ThreeConditionBadge ok={bestConditions.remainingYearsOk} label={`残期間 ${remainingYears}年 (目安10年以上)`} />
+              <ThreeConditionBadge ok={bestConditions.balanceOk} label={`残債 ${yenM(currentBalance)} (目安1,000万以上)`} />
             </div>
+            <p className="text-xs text-neutral-600">
+              {bestConditions.allOk
+                ? '✅ 3条件クリア — 借り換えの効果が期待できます'
+                : conditionsOkCount === 2
+                  ? '⚠️ 2条件クリア — 一定の効果はあります'
+                  : '❌ 借り換え効果が限定的な可能性があります'}
+            </p>
           </div>
         )}
 
@@ -204,11 +340,35 @@ export default function RefinancePage() {
                   onChange={v => set({ prepaymentPenalty: v * 10000 })}
                   min={0} max={100} step={1} unit="万円"
                   hint="楽天銀行はオンライン手続きで0円" />
-                <NumberInput label="抵当権設定・抹消（登記費用）"
-                  value={registrationFee / 10000}
-                  onChange={v => set({ registrationFee: v * 10000 })}
-                  min={0} max={100} step={1} unit="万円"
-                  hint="司法書士費用込み目安：15万円" />
+
+                {/* Auto registration fee toggle */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-neutral-700">抵当権設定・抹消（登記費用）</label>
+                    <button
+                      onClick={() => set({ autoRegistrationFee: !autoRegistrationFee })}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${autoRegistrationFee ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-50'}`}
+                    >
+                      {autoRegistrationFee ? '自動計算' : '手動設定'}
+                    </button>
+                  </div>
+                  {autoRegistrationFee ? (
+                    <div>
+                      <div className="input-cell bg-neutral-50 text-neutral-500 text-xs py-1.5">
+                        {yenM(effectiveRegistrationFee)}（自動計算）
+                      </div>
+                      <p className="text-[10px] text-neutral-400 mt-0.5">
+                        抵当権設定税 {yenM(autoFeeBreakdown.mortgageTax)} + 司法書士 7万 + 印紙税 {autoFeeBreakdown.stampDuty >= 20000 ? '2万' : '1万'} + 抹消 0.2万
+                      </p>
+                    </div>
+                  ) : (
+                    <NumberInput label="" value={registrationFee / 10000}
+                      onChange={v => set({ registrationFee: v * 10000 })}
+                      min={0} max={100} step={1} unit="万円"
+                      hint="司法書士費用込み目安：15〜20万円" />
+                  )}
+                </div>
+
                 <NumberInput label="その他費用"
                   value={otherFees / 10000}
                   onChange={v => set({ otherFees: v * 10000 })}
@@ -241,10 +401,28 @@ export default function RefinancePage() {
                     <option value="fee">事務手数料（安い順）</option>
                   </select>
                 </div>
+
+                {/* Rate scenario */}
+                <div>
+                  <label className="text-xs font-medium text-neutral-700 block mb-1">金利上昇シナリオ</label>
+                  <div className="flex gap-1">
+                    {([
+                      { label: '🌤 現状維持', value: 0 },
+                      { label: '⚡ +0.3%', value: 0.3 },
+                      { label: '🌩 +0.5%', value: 0.5 },
+                    ] as const).map(s => (
+                      <button key={s.value} onClick={() => setScenarioDelta(s.value)}
+                        className={`flex-1 text-[10px] px-1.5 py-1.5 rounded border transition-colors leading-tight ${scenarioDelta === s.value ? 'bg-navy-500 text-white border-navy-500' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={showAllBanks} onChange={e => setShowAllBanks(e.target.checked)}
                     className="rounded" />
-                  <span className="text-xs text-neutral-600">借換え対応タグ以外も表示</span>
+                  <span className="text-xs text-neutral-600">現在金利以上の銀行も参考表示</span>
                 </label>
               </div>
             </div>
@@ -253,7 +431,7 @@ export default function RefinancePage() {
           {/* Center + Right: Results */}
           <div className="lg:col-span-2 space-y-4">
 
-            {/* Summary stats */}
+            {/* KPI cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">現在の月返済額</p>
@@ -261,9 +439,9 @@ export default function RefinancePage() {
                 <p className="text-xs text-neutral-400">金利 {pct(currentRate)}</p>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
-                <p className="text-xs text-neutral-500">最大月間節約額</p>
-                <p className="text-lg font-bold text-success-500">{bestResult ? yenM(bestResult.monthlySavings) : '—'}</p>
-                <p className="text-xs text-neutral-400">金利差 {rateDiff}%</p>
+                <p className="text-xs text-neutral-500">借換え後月返済</p>
+                <p className="text-lg font-bold text-success-500">{bestResult ? yenM(bestResult.newMonthly) : '—'}</p>
+                <p className="text-xs text-neutral-400">{bestResult ? `月 ${yenM(bestResult.monthlySavings)} 削減` : ''}</p>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">最大総節約額</p>
@@ -288,7 +466,7 @@ export default function RefinancePage() {
               {results.length === 0 ? (
                 <div className="p-8 text-center text-neutral-400 text-sm">
                   現在の金利より低い銀行が見つかりません。<br />
-                  「借換え対応タグ以外も表示」をオンにするか、金利タイプを変更してください。
+                  「現在金利以上の銀行も参考表示」をオンにするか、金利タイプを変更してください。
                 </div>
               ) : (
                 <div className="overflow-x-auto max-h-96 overflow-y-auto">
@@ -300,50 +478,87 @@ export default function RefinancePage() {
                         <th className="px-3 py-2 text-right font-semibold text-neutral-600">月削減額</th>
                         <th className="px-3 py-2 text-right font-semibold text-neutral-600">事務手数料</th>
                         <th className="px-3 py-2 text-center font-semibold text-neutral-600">損益分岐</th>
-                        <th className="px-3 py-2 text-right font-semibold text-neutral-600">総節約額</th>
+                        <th className="px-3 py-2 text-right font-semibold text-neutral-600">総節約額{scenarioDelta > 0 ? '（ベース）' : ''}</th>
                         <th className="px-3 py-2 text-center font-semibold text-neutral-600">評価</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {results.map((r, i) => (
-                        <tr key={r.bankId}
-                          onClick={() => set({ selectedBankId: r.bankId })}
-                          className={`cursor-pointer border-b border-neutral-100 transition-colors ${
-                            (selectedBankId === r.bankId || (!selectedBankId && i === 0))
-                              ? 'bg-orange-50 ring-1 ring-orange-300'
-                              : i % 2 === 0 ? 'bg-white hover:bg-neutral-50' : 'bg-neutral-50 hover:bg-neutral-100'
-                          }`}>
-                          <td className="px-3 py-2">
-                            <div className="font-medium text-navy-500 leading-tight">{r.bankName.slice(0, 22)}</div>
-                            <div className="text-neutral-400 text-[10px]">{r.rateType}</div>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <span className="font-bold text-success-500">{pct(r.newRate)}</span>
-                            <div className="text-[10px] text-danger-500">▼{(currentRate - r.newRate).toFixed(3)}%</div>
-                          </td>
-                          <td className="px-3 py-2 text-right font-bold text-success-500">{yenM(r.monthlySavings)}</td>
-                          <td className="px-3 py-2 text-right text-neutral-600">{yenM(r.processingFee)}</td>
-                          <td className="px-3 py-2 text-center">
-                            {r.breakEvenMonths === Infinity ? (
-                              <span className="text-danger-500">—</span>
-                            ) : (
-                              <span className={`font-semibold ${r.breakEvenMonths <= 36 ? 'text-success-500' : r.breakEvenMonths <= 72 ? 'text-orange-500' : 'text-danger-500'}`}>
-                                {r.breakEvenMonths}ヶ月
-                              </span>
+                      {scenarioResults.map((r, i) => {
+                        const bankData = REFINANCE_BANKS_2026.find(b => b.id === r.bankId);
+                        const isSelected = selectedBankId === r.bankId || (!selectedBankId && i === 0);
+                        const isExpanded = expandedBankId === r.bankId;
+                        const hasMinLoanWarning = bankData && currentBalance < bankData.minLoanAmount;
+                        return (
+                          <>
+                            <tr
+                              key={r.bankId}
+                              onClick={() => {
+                                set({ selectedBankId: r.bankId });
+                                setExpandedBankId(expandedBankId === r.bankId ? null : r.bankId);
+                              }}
+                              className={`cursor-pointer border-b border-neutral-100 transition-colors relative ${
+                                isSelected
+                                  ? 'bg-orange-50 ring-1 ring-orange-300'
+                                  : i % 2 === 0 ? 'bg-white hover:bg-neutral-50' : 'bg-neutral-50 hover:bg-neutral-100'
+                              }`}
+                            >
+                              <td className="px-3 py-2">
+                                <div className="flex items-center gap-1">
+                                  {i === 0 && <span className="text-orange-500 font-bold text-[10px]">🏆</span>}
+                                  <div>
+                                    <div className="font-medium text-navy-500 leading-tight">
+                                      {bankData ? dansinIcon(bankData.dansin) : ''}{' '}
+                                      {r.bankName.slice(0, 18)}
+                                    </div>
+                                    <div className="text-neutral-400 text-[10px]">{r.rateType}</div>
+                                  </div>
+                                  {hasMinLoanWarning && <span title="最低借入額に注意" className="text-orange-400">⚠️</span>}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className="font-bold text-success-500">{pct(r.newRate)}</span>
+                                <div className="text-[10px] text-danger-500">▼{(currentRate - r.newRate).toFixed(3)}%</div>
+                              </td>
+                              <td className="px-3 py-2 text-right font-bold text-success-500">{yenM(r.monthlySavings)}</td>
+                              <td className="px-3 py-2 text-right text-neutral-600">{yenM(r.processingFee)}</td>
+                              <td className="px-3 py-2 text-center">
+                                {r.breakEvenMonths === Infinity ? (
+                                  <span className="text-danger-500">—</span>
+                                ) : (
+                                  <span className={`font-semibold ${r.breakEvenMonths <= 36 ? 'text-success-500' : r.breakEvenMonths <= 72 ? 'text-orange-500' : 'text-danger-500'}`}>
+                                    {r.breakEvenMonths}ヶ月
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <span className={`font-bold ${r.totalSavingsAll > 0 ? 'text-success-500' : 'text-danger-500'}`}>
+                                  {yenM(r.totalSavingsAll)}
+                                </span>
+                                {r.scenario && (
+                                  <div className={`text-[10px] ${r.scenario.newTotalSavingsAll > 0 ? 'text-orange-500' : 'text-danger-500'}`}>
+                                    ({yenM(r.scenario.newTotalSavingsAll)})
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                <StarRating score={getScore(r)} />
+                              </td>
+                            </tr>
+                            {isExpanded && bankData && (
+                              <tr key={`${r.bankId}-notes`}>
+                                <td colSpan={7} className="px-4 pb-3 bg-orange-50">
+                                  <p className="text-xs text-neutral-600 mt-2">{bankData.notes}</p>
+                                  <div className="flex gap-4 mt-2 text-xs text-neutral-500">
+                                    <span>最低借入: {yenM(bankData.minLoanAmount)}</span>
+                                    <span>審査目安: 約{bankData.applyDays}日</span>
+                                    <span>団信: {bankData.dansin}</span>
+                                  </div>
+                                </td>
+                              </tr>
                             )}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <span className={`font-bold ${r.totalSavingsAll > 0 ? 'text-success-500' : 'text-danger-500'}`}>
-                              {yenM(r.totalSavingsAll)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex justify-center">
-                              <ScoreBar value={getScore(r)} />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                          </>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -361,15 +576,15 @@ export default function RefinancePage() {
                   <div>
                     <h4 className="text-xs font-bold text-neutral-500 mb-2">借り換えコスト内訳</h4>
                     <div className="space-y-1 text-xs">
-                      {[
+                      {([
                         ['事務手数料', selectedResult.processingFee],
                         ['繰上返済手数料', prepaymentPenalty],
-                        ['抵当権設定・抹消費用', registrationFee],
+                        ['抵当権設定・抹消費用', effectiveRegistrationFee],
                         ['その他費用', otherFees],
-                      ].map(([label, val]) => (
-                        <div key={label as string} className="flex justify-between py-1 border-b border-neutral-100">
-                          <span className="text-neutral-600">{label as string}</span>
-                          <span className="font-mono">{yenM(val as number)}</span>
+                      ] as [string, number][]).map(([label, val]) => (
+                        <div key={label} className="flex justify-between py-1 border-b border-neutral-100">
+                          <span className="text-neutral-600">{label}</span>
+                          <span className="font-mono">{yenM(val)}</span>
                         </div>
                       ))}
                       <div className="flex justify-between py-1 font-bold">
@@ -382,35 +597,56 @@ export default function RefinancePage() {
                   <div>
                     <h4 className="text-xs font-bold text-neutral-500 mb-2">利息比較（残期間）</h4>
                     <div className="space-y-1 text-xs">
-                      {[
+                      {([
                         ['現在の残利息', selectedResult.totalInterestCurrent, 'text-danger-500'],
                         ['借り換え後の残利息', selectedResult.totalInterestNew, 'text-success-500'],
                         ['利息節約額', selectedResult.totalInterestCurrent - selectedResult.totalInterestNew, 'text-navy-500 font-bold'],
                         ['費用差引後の純節約', selectedResult.totalSavingsAll, selectedResult.totalSavingsAll > 0 ? 'text-success-500 font-bold' : 'text-danger-500 font-bold'],
-                      ].map(([label, val, cls]) => (
-                        <div key={label as string} className="flex justify-between py-1 border-b border-neutral-100">
-                          <span className="text-neutral-600">{label as string}</span>
-                          <span className={`font-mono ${cls as string}`}>{yenM(val as number)}</span>
+                      ] as [string, number, string][]).map(([label, val, cls]) => (
+                        <div key={label} className="flex justify-between py-1 border-b border-neutral-100">
+                          <span className="text-neutral-600">{label}</span>
+                          <span className={`font-mono ${cls}`}>{yenM(val)}</span>
                         </div>
                       ))}
+                      {scenarioDelta > 0 && (() => {
+                        const s = calcRefinanceScenario(selectedResult, input, scenarioDelta);
+                        return (
+                          <div className="flex justify-between py-1 border-b border-neutral-100">
+                            <span className="text-orange-600">金利+{scenarioDelta}%上昇時の節約額</span>
+                            <span className={`font-mono font-bold ${s.newTotalSavingsAll > 0 ? 'text-orange-500' : 'text-danger-500'}`}>
+                              {yenM(s.newTotalSavingsAll)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
 
                 {/* Cumulative savings chart */}
-                <h4 className="text-xs font-bold text-neutral-500 mb-2">累計節約額の推移</h4>
+                <h4 className="text-xs font-bold text-neutral-500 mb-2">
+                  累計節約額の推移{scenarioDelta > 0 ? `（+${scenarioDelta}%シナリオ比較）` : ''}
+                </h4>
                 <ResponsiveContainer width="100%" height={180}>
                   <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                    <XAxis dataKey="year" tick={{ fontSize: 9 }}
-                      tickFormatter={v => `${v}年`} interval={Math.floor(chartData.length / 6)} />
+                    <XAxis dataKey="month" tick={{ fontSize: 9 }}
+                      tickFormatter={v => `${(Number(v) / 12).toFixed(0)}年`}
+                      interval={Math.floor(chartData.length / 6)} />
                     <YAxis tick={{ fontSize: 9 }}
-                      tickFormatter={v => `${Math.round(v / 10000)}万`} />
-                    <Tooltip formatter={(v: unknown) => [`${yenM(v as number)}`, '累計節約額']}
-                      labelFormatter={v => `${v}年後`} />
+                      tickFormatter={v => `${Math.round(Number(v) / 10000)}万`} />
+                    <Tooltip
+                      formatter={(v: unknown) => [`${yenM(v as number)}`]}
+                      labelFormatter={v => `${(Number(v) / 12).toFixed(1)}年後`}
+                    />
                     <ReferenceLine y={0} stroke="#E74C3C" strokeDasharray="4 4" label={{ value: '損益分岐', position: 'right', fontSize: 9 }} />
-                    <Area type="monotone" dataKey="累計節約額（費用差引後）"
+                    <Area type="monotone" dataKey="累計節約額（ベース）"
                       stroke="#27AE60" fill="#E8F8EF" strokeWidth={2} />
+                    {scenarioDelta > 0 && (
+                      <Area type="monotone" dataKey="累計節約額（金利上昇シナリオ）"
+                        stroke="#F39C12" fill="#FEF9E7" strokeWidth={2} strokeDasharray="4 2" />
+                    )}
+                    {scenarioDelta > 0 && <Legend wrapperStyle={{ fontSize: 9 }} />}
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -418,14 +654,16 @@ export default function RefinancePage() {
           </div>
         </div>
 
-        {/* Explanation panel */}
+        {/* Knowledge panel */}
         <div className="bg-navy-50 border border-navy-100 rounded-xl p-5">
           <h3 className="text-sm font-bold text-navy-500 mb-3">📖 借り換えの基礎知識</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
             {[
               { title: '借り換えが有利になる目安', body: '一般的に「金利差0.3%以上」「残期間10年以上」「残債1,000万円以上」の3条件が揃うと効果が大きいとされます。' },
               { title: '損益分岐点とは', body: '借り換えにかかった費用を、毎月の削減額で回収するまでの期間。この月数が残返済期間より短ければ借り換えにメリットがあります。' },
               { title: '変動金利リスク', body: '変動金利は半年ごとに見直され、金利上昇時は月返済額が増加します。楽天銀行のように2022年0.537%→現在1.511%と約3倍になった事例もあります。' },
+              { title: '変動金利 vs 固定金利の選択', body: '変動金利は低金利時代に有利ですが金利上昇リスクがあります。固定金利は将来の返済額が確定するため計画が立てやすい反面、初期金利は高めです。' },
+              { title: '住宅ローン控除への影響', body: '借り換え後も条件次第で住宅ローン控除（年末残高×0.7%）は継続できます。借り換え先が住宅ローン控除の要件（返済期間10年以上等）を満たすか確認が必要です。' },
             ].map(item => (
               <div key={item.title} className="bg-white rounded-lg p-3 border border-neutral-100">
                 <div className="font-bold text-navy-500 mb-1">{item.title}</div>

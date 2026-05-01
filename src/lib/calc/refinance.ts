@@ -1,5 +1,39 @@
 // 住宅ローン借り換えシミュレーション計算
 
+// Auto-calculate registration fee based on balance
+export function estimateRegistrationFee(balance: number): number {
+  const mortgageTax = Math.floor(balance * 0.004);      // 抵当権設定登録免許税
+  const cancellationTax = 2_000;                         // 抵当権抹消登録免許税 (土地+建物)
+  const judicialScrivener = 70_000;                      // 司法書士報酬
+  const stampDuty = balance >= 10_000_000 ? 20_000 : 10_000; // 印紙税
+  return mortgageTax + cancellationTax + judicialScrivener + stampDuty;
+}
+
+// Check the "3 conditions" rule for worthwhile refinancing
+export interface ThreeConditionCheck {
+  rateDiff: number;        // currentRate - newRate
+  rateDiffOk: boolean;     // >= 0.3
+  remainingYearsOk: boolean; // >= 10
+  balanceOk: boolean;      // >= 10,000,000
+  allOk: boolean;
+}
+
+export function checkThreeConditions(
+  currentRate: number,
+  newRate: number,
+  remainingYears: number,
+  balance: number
+): ThreeConditionCheck {
+  const rateDiff = currentRate - newRate;
+  return {
+    rateDiff,
+    rateDiffOk: rateDiff >= 0.3,
+    remainingYearsOk: remainingYears >= 10,
+    balanceOk: balance >= 10_000_000,
+    allOk: rateDiff >= 0.3 && remainingYears >= 10 && balance >= 10_000_000,
+  };
+}
+
 export interface RefinanceInput {
   currentBalance: number;   // 現在の残債 (円)
   currentRate: number;      // 現在の金利 (% e.g. 1.511)
@@ -86,4 +120,20 @@ export function calcRefinance(
     rateType: bank.rateType,
     areas: bank.areas,
   };
+}
+
+// Rate-rise scenario: what if new bank raises rates by scenarioDelta?
+export function calcRefinanceScenario(
+  baseResult: RefinanceResult,
+  input: RefinanceInput,
+  scenarioDelta: number  // e.g. 0.5 = +0.5% rise at new bank
+): { newMonthlySavings: number; newTotalSavingsAll: number; newBreakEvenMonths: number } {
+  const adjustedNewRate = baseResult.newRate + scenarioDelta;
+  const months = input.remainingYears * 12;
+  const r = adjustedNewRate / 100 / 12;
+  const newMonthly = (input.currentBalance * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  const monthlySavings = baseResult.currentMonthly - newMonthly;
+  const totalSavingsAll = monthlySavings * months - baseResult.totalCost;
+  const breakEvenMonths = monthlySavings > 0 ? Math.ceil(baseResult.totalCost / monthlySavings) : Infinity;
+  return { newMonthlySavings: monthlySavings, newTotalSavingsAll: totalSavingsAll, newBreakEvenMonths: breakEvenMonths };
 }
