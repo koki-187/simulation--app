@@ -188,12 +188,95 @@ function NumberInput({
   );
 }
 
+// ── PDF Export ────────────────────────────────────────────────────────────────
+async function exportPrepaymentPDF(params: {
+  loanAmount: number;
+  annualRate: number;
+  termYears: number;
+  baseInterest: number;
+  prepInterest: number;
+  interestSaved: number;
+  savedYears: number;
+  savedRemMonths: number;
+  savedMonths: number;
+  baseEndDate: string;
+  prepEndDate: string;
+  events: PrepaymentEvent[];
+}) {
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const fmt = (n: number) => Math.round(n).toLocaleString('ja-JP') + '円';
+  const fmtMan = (n: number) => (n / 10000).toFixed(1) + '万円';
+  const today = new Date().toLocaleDateString('ja-JP');
+
+  const eventRows = params.events.map((ev, i) => `
+    <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:center;">イベント${i + 1}</td>
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:center;">${ev.yearAfter}年後</td>
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;">${ev.amount}万円</td>
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:center;">${ev.type}</td>
+    </tr>`).join('');
+
+  const html = `
+    <div style="padding:20px;font-family:sans-serif;">
+      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:bold;">繰上げ返済シミュレーション</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.8;">作成日: ${today}</div>
+      </div>
+
+      <h3 style="font-size:13px;color:#1C2B4A;margin:16px 0 8px;">基本ローン情報</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <tbody>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">借入金額</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${params.loanAmount}万円</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">年利</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${params.annualRate}%</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">借入期間</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${params.termYears}年</td></tr>
+        </tbody>
+      </table>
+
+      ${params.events.length > 0 ? `
+      <h3 style="font-size:13px;color:#1C2B4A;margin:16px 0 8px;">繰上げ返済イベント</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#1C2B4A;color:white;">
+          <th style="padding:5px 8px;border:1px solid #374151;">イベント</th>
+          <th style="padding:5px 8px;border:1px solid #374151;">実施時期</th>
+          <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">金額</th>
+          <th style="padding:5px 8px;border:1px solid #374151;">方式</th>
+        </tr></thead>
+        <tbody>${eventRows}</tbody>
+      </table>` : ''}
+
+      <h3 style="font-size:13px;color:#1C2B4A;margin:16px 0 8px;">シミュレーション結果</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <tbody>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">当初返済終了</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${params.baseEndDate}</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">繰上げ後終了</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;color:#E8632A;">${params.prepEndDate}</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">短縮期間</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;color:#16A34A;">${params.savedMonths > 0 ? `${params.savedYears > 0 ? params.savedYears + '年' : ''}${params.savedRemMonths > 0 ? params.savedRemMonths + 'ヶ月' : ''}` : '変化なし'}</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">繰上げなし 総利息</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;font-weight:600;">${fmtMan(params.baseInterest)}</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">繰上げあり 総利息</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;font-weight:600;">${fmtMan(params.prepInterest)}</td></tr>
+          <tr style="background:#F0FDF4;"><td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:bold;">総利息削減額</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#16A34A;font-weight:bold;">${fmtMan(params.interestSaved)}</td></tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:16px;font-size:9px;color:#6B7280;">
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+      </div>
+    </div>
+  `;
+
+  await elementToPdf({
+    html,
+    filename: `TERASS_繰上げ返済シミュレーション_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'portrait',
+  });
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function PrepaymentPage() {
   // Basic loan inputs
   const [loanAmount, setLoanAmount] = useState(4000);     // 万円
   const [annualRate, setAnnualRate] = useState(0.5);       // %
   const [termYears, setTermYears] = useState(35);          // 年
+
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Prepayment events
   const [events, setEvents] = useState<PrepaymentEvent[]>([
@@ -312,9 +395,41 @@ export default function PrepaymentPage() {
   return (
     <AppShell>
       {/* Header */}
-      <div className="bg-navy-500 text-white px-6 py-5">
-        <h1 className="text-lg font-bold leading-tight">繰上げ返済シミュレーター</h1>
-        <p className="text-xs text-navy-100 mt-0.5">元金・利息・期間の変化をリアルタイム確認</p>
+      <div className="bg-navy-500 text-white px-6 py-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold leading-tight">繰上げ返済シミュレーター</h1>
+          <p className="text-xs text-navy-100 mt-0.5">元金・利息・期間の変化をリアルタイム確認</p>
+        </div>
+        <button
+          onClick={async () => {
+            setPdfLoading(true);
+            try {
+              await exportPrepaymentPDF({
+                loanAmount,
+                annualRate,
+                termYears,
+                baseInterest,
+                prepInterest,
+                interestSaved,
+                savedYears,
+                savedRemMonths,
+                savedMonths,
+                baseEndDate,
+                prepEndDate,
+                events,
+              });
+            } catch(e) {
+              console.error(e);
+              alert('PDF出力でエラーが発生しました。');
+            } finally {
+              setPdfLoading(false);
+            }
+          }}
+          disabled={pdfLoading}
+          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+        >
+          {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
+        </button>
       </div>
 
       {/* Body */}

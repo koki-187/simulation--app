@@ -77,13 +77,13 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
           💡 <b>空室率</b>: 年間のうち空室になる割合（都心RC=5%, 地方木造=15%が目安）。
           <b>固都税</b>: 固定資産税＋都市計画税の年額。物件価格の0.15〜0.2%程度。
         </p>
-        <NumInput label="家賃収入（月）" value={input.monthlyRent} onChange={v => set({ monthlyRent: v })} fmt="currency" unit="円/月" />
-        <NumInput label="管理費（月）" value={input.managementFee} onChange={v => set({ managementFee: v })} fmt="currency" unit="円/月" />
-        <NumInput label="修繕積立金（月）" value={input.repairFund} onChange={v => set({ repairFund: v })} fmt="currency" unit="円/月" />
-        <NumInput label="その他費用（月）" value={input.otherExpenses} onChange={v => set({ otherExpenses: v })} fmt="currency" unit="円/月" />
+        <NumInput label="家賃収入（月）" value={input.monthlyRent} onChange={v => set({ monthlyRent: Math.max(0, v) })} fmt="currency" unit="円/月" />
+        <NumInput label="管理費（月）" value={input.managementFee} onChange={v => set({ managementFee: Math.max(0, v) })} fmt="currency" unit="円/月" />
+        <NumInput label="修繕積立金（月）" value={input.repairFund} onChange={v => set({ repairFund: Math.max(0, v) })} fmt="currency" unit="円/月" />
+        <NumInput label="その他費用（月）" value={input.otherExpenses} onChange={v => set({ otherExpenses: Math.max(0, v) })} fmt="currency" unit="円/月" />
         <NumInput label="空室率" value={input.vacancyRate} onChange={v => set({ vacancyRate: Math.max(0, Math.min(0.99, v)) })} fmt="percent" step={0.01} />
         <NumInput label="実効家賃（自動）" value={result.effectiveMonthlyRent} onChange={() => {}} fmt="currency" unit="円/月" readOnly />
-        <NumInput label="固都税（年）" value={input.fixedAssetTax} onChange={v => set({ fixedAssetTax: v })} fmt="currency" unit="円/年" />
+        <NumInput label="固都税（年）" value={input.fixedAssetTax} onChange={v => set({ fixedAssetTax: Math.max(0, v) })} fmt="currency" unit="円/年" />
         <NumInput label="表面利回り（自動）" value={result.ratios.grossYield} onChange={() => {}} fmt="percent" readOnly />
         <NumInput label="実質利回り（自動）" value={result.ratios.netYield} onChange={() => {}} fmt="percent" readOnly />
       </Section>

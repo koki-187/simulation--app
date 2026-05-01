@@ -1,9 +1,85 @@
 'use client';
+import { useState } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { Section } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen, pct } from '@/lib/format';
+
+async function exportTaxPDF(t: ReturnType<typeof useSimStore.getState>['resultA']['taxDetail']) {
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const fmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
+  const today = new Date().toLocaleDateString('ja-JP');
+
+  const html = `
+    <div style="padding:20px;font-family:sans-serif;">
+      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:bold;">税金詳細レポート</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.8;">作成日: ${today}</div>
+      </div>
+
+      <h3 style="font-size:13px;color:#1C2B4A;margin:16px 0 8px;">不動産所得の計算（1年目）</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <tbody>
+          ${[
+            ['家賃収入', fmt(t.rentalRevenue)],
+            ['管理費・修繕積立金', fmt(t.managementExp)],
+            ['損害保険料（概算）', fmt(t.insuranceEst)],
+            ['固定資産税', fmt(t.fixedAssetTax)],
+            ['減価償却費', fmt(t.depreciation)],
+            ['ローン利息', fmt(t.loanInterest)],
+            ['経費合計', fmt(t.totalExpenses)],
+            ['不動産所得', fmt(t.realEstateIncome)],
+          ].map(([l, v]) => `
+            <tr>
+              <td style="padding:4px 8px;border:1px solid #E5E7EB;">${l}</td>
+              <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${v}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;">
+        <tbody>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">所得税率（概算）</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${(t.incomeTaxRate * 100).toFixed(2)}%</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">所得税概算</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;font-weight:600;">${fmt(t.incomeTax)}</td></tr>
+          <tr><td style="padding:4px 8px;border:1px solid #E5E7EB;">住民税（10%）</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;font-weight:600;">${fmt(t.residentTax)}</td></tr>
+          <tr style="background:#FFF7ED;"><td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:bold;">合計税負担</td><td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;font-weight:bold;">${fmt(t.totalTaxBurden)}</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-size:13px;color:#1C2B4A;margin:16px 0 8px;">譲渡所得税の計算</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <tbody>
+          ${[
+            ['売却価格', fmt(t.salePrice)],
+            ['取得費（購入価格）', fmt(t.acquisitionCost)],
+            ['累計減価償却費', fmt(t.accumulatedDep)],
+            ['売却費用(3%)', fmt(t.sellingCosts)],
+            ['譲渡所得', fmt(t.taxableGain)],
+          ].map(([l, v]) => `
+            <tr>
+              <td style="padding:4px 8px;border:1px solid #E5E7EB;">${l}</td>
+              <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${v}</td>
+            </tr>`).join('')}
+          <tr style="background:#FFF7ED;">
+            <td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:bold;">譲渡所得税概算 (${t.isLongTerm ? '長期' : '短期'} ${(t.taxRate * 100).toFixed(2)}%)</td>
+            <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;font-weight:bold;">${fmt(t.capitalGainsTax)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:16px;font-size:9px;color:#6B7280;">
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+      </div>
+    </div>
+  `;
+
+  await elementToPdf({
+    html,
+    filename: `TERASS_税金詳細_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'portrait',
+  });
+}
 
 export default function TaxPage() {
   const { resultA, resultB, activePattern } = useSimStore(
@@ -11,6 +87,7 @@ export default function TaxPage() {
   );
   const result = activePattern === 'B' ? resultB : resultA;
   const t = result.taxDetail;
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const expenseRows = [
     ['管理費・修繕積立金', yen(t.managementExp)],
@@ -35,7 +112,21 @@ export default function TaxPage() {
     <AppShell>
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
         <div><h1 className="text-lg font-bold">税金詳細</h1><p className="text-xs text-navy-100">不動産所得税・譲渡所得税の概算</p></div>
-        <PatternToggle />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              setPdfLoading(true);
+              try { await exportTaxPDF(t); }
+              catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
+              finally { setPdfLoading(false); }
+            }}
+            disabled={pdfLoading}
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+          >
+            {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
+          </button>
+          <PatternToggle />
+        </div>
       </div>
       <div className="p-6 space-y-6 max-w-4xl">
         <div className="grid grid-cols-2 gap-6">
