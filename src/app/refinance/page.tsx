@@ -122,6 +122,7 @@ export default function RefinancePage() {
     currentBalance, currentRate, remainingYears, prepaymentPenalty,
     currentBank, registrationFee, autoRegistrationFee, otherFees,
     selectedBankId, rateTypeFilter, sortBy, set,
+    rateDataMonth, refreshedRates, refreshDataDate,
   } = useRefinanceStore(
     useShallow(s => ({
       currentBalance: s.currentBalance, currentRate: s.currentRate,
@@ -130,6 +131,9 @@ export default function RefinancePage() {
       autoRegistrationFee: s.autoRegistrationFee,
       otherFees: s.otherFees, selectedBankId: s.selectedBankId,
       rateTypeFilter: s.rateTypeFilter, sortBy: s.sortBy, set: s.set,
+      rateDataMonth: s.rateDataMonth,
+      refreshedRates: s.refreshedRates,
+      refreshDataDate: s.refreshDataDate,
     }))
   );
 
@@ -137,17 +141,63 @@ export default function RefinancePage() {
   const [scenarioDelta, setScenarioDelta] = useState(0);
   const [expandedBankId, setExpandedBankId] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshResult, setRefreshResult] = useState<{ foundCount: number; total: number } | null>(null);
+
+  const getCurrentMonthJST = (): string => {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit'
+    }).formatToParts(now);
+    const y = parts.find(p => p.type === 'year')?.value ?? String(now.getFullYear());
+    const m = parts.find(p => p.type === 'month')?.value ?? String(now.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  };
+
+  const currentMonthJST = getCurrentMonthJST();
+  const isAlreadyUpdatedThisMonth = rateDataMonth === currentMonthJST;
+
+  const handleRefreshRates = async () => {
+    if (isRefreshing || isAlreadyUpdatedThisMonth) return;
+    setIsRefreshing(true);
+    setRefreshError(null);
+    setRefreshResult(null);
+    try {
+      const res = await fetch('/api/refresh-rates', { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? '更新に失敗しました');
+      // Only update rates that passed validation (non-null values)
+      const validRates: Record<string, number> = {};
+      for (const [k, v] of Object.entries(data.rates as Record<string, unknown>)) {
+        if (typeof v === 'number' && v > 0) validRates[k] = v;
+      }
+      set({
+        rateDataMonth: data.month,
+        refreshedRates: { ...refreshedRates, ...validRates },
+        refreshDataDate: data.updatedAt,
+      });
+      setRefreshResult({ foundCount: data.foundCount, total: data.totalBanks });
+    } catch (e) {
+      setRefreshError(e instanceof Error ? e.message : '更新エラー');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const effectiveRegistrationFee = autoRegistrationFee
     ? estimateRegistrationFee(currentBalance)
     : registrationFee;
 
   const eligibleBanks = useMemo(() =>
-    REFINANCE_BANKS_2026.filter(b =>
-      (rateTypeFilter === 'all' || b.rateType === rateTypeFilter) &&
-      (showAllBanks || b.rate < currentRate)
-    ),
-    [showAllBanks, rateTypeFilter, currentRate]
+    REFINANCE_BANKS_2026.filter(b => {
+      const effectiveRate = refreshedRates[b.id] ?? b.rate;
+      return (
+        (rateTypeFilter === 'all' || b.rateType === rateTypeFilter) &&
+        (showAllBanks || effectiveRate < currentRate)
+      );
+    }),
+    [showAllBanks, rateTypeFilter, currentRate, refreshedRates]
   );
 
   const input: RefinanceInput = {
@@ -162,7 +212,8 @@ export default function RefinancePage() {
   const results: RefinanceResult[] = useMemo(() =>
     eligibleBanks.map(b => {
       const processingFee = calcProcessingFee(b, currentBalance);
-      return calcRefinance(input, { id: b.id, name: b.name, rate: b.rate, fee: processingFee, rateType: b.rateType, areas: [] });
+      const effectiveRate = refreshedRates[b.id] ?? b.rate;
+      return calcRefinance(input, { id: b.id, name: b.name, rate: effectiveRate, fee: processingFee, rateType: b.rateType, areas: [] });
     }).sort((a, b_) => {
       if (sortBy === 'savings') return b_.totalSavingsAll - a.totalSavingsAll;
       if (sortBy === 'breakeven') return a.breakEvenMonths - b_.breakEvenMonths;
@@ -170,7 +221,7 @@ export default function RefinancePage() {
       return a.processingFee - b_.processingFee;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eligibleBanks, currentBalance, currentRate, remainingYears, prepaymentPenalty, effectiveRegistrationFee, otherFees, sortBy]
+    [eligibleBanks, currentBalance, currentRate, remainingYears, prepaymentPenalty, effectiveRegistrationFee, otherFees, sortBy, refreshedRates]
   );
 
   const scenarioResults = useMemo(() =>
@@ -259,6 +310,11 @@ export default function RefinancePage() {
         <div>
           <h1 className="text-lg font-bold">🔄 借り換えシミュレーター</h1>
           <p className="text-xs text-navy-100 mt-0.5">現在のローンを見直して、最適な借り換え先を比較・試算します</p>
+          <p className="text-[10px] text-navy-200 mt-0.5">
+            📅 データ基準日：{refreshDataDate
+              ? new Date(refreshDataDate).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' }) + '時点の金利水準'
+              : '2026年5月1日時点の金利水準'}
+          </p>
         </div>
         <button
           onClick={async () => {
@@ -440,6 +496,53 @@ export default function RefinancePage() {
                     className="rounded" />
                   <span className="text-xs text-neutral-600">現在金利以上の銀行も参考表示</span>
                 </label>
+
+                {/* Rate refresh panel */}
+                <div className="bg-navy-50 border border-navy-200 rounded-lg p-3 mt-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-navy-600">📡 金利データ更新</span>
+                    {rateDataMonth && (
+                      <span className="text-[10px] text-navy-400">
+                        {rateDataMonth.replace(/^(\d{4})-(\d{2})$/, '$1年$2月')}更新済
+                      </span>
+                    )}
+                  </div>
+                  {Object.keys(refreshedRates).length > 0 && (
+                    <p className="text-[10px] text-success-600 mb-1.5">
+                      ✅ {Object.keys(refreshedRates).length}行の金利を最新データで表示中
+                    </p>
+                  )}
+                  <button
+                    onClick={handleRefreshRates}
+                    disabled={isRefreshing || isAlreadyUpdatedThisMonth}
+                    className={`w-full text-[11px] py-2 px-3 rounded border font-medium transition-all ${
+                      isAlreadyUpdatedThisMonth
+                        ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
+                        : isRefreshing
+                          ? 'bg-navy-100 text-navy-500 border-navy-200 cursor-wait'
+                          : 'bg-navy-500 text-white border-navy-500 hover:bg-navy-600 active:bg-navy-700'
+                    }`}
+                  >
+                    {isRefreshing
+                      ? '⏳ 調査中... (最大20秒)'
+                      : isAlreadyUpdatedThisMonth
+                        ? `✅ ${rateDataMonth?.replace(/^(\d{4})-0?(\d{1,2})$/, '$1年$2月')} 更新済み`
+                        : '🔄 最新の金利状況を反映'}
+                  </button>
+                  {refreshResult && (
+                    <p className="text-[10px] text-success-600 mt-1.5">
+                      {refreshResult.foundCount}/{refreshResult.total}行を更新しました
+                    </p>
+                  )}
+                  {refreshError && (
+                    <p className="text-[10px] text-danger-500 mt-1.5">
+                      ⚠ {refreshError}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-neutral-400 mt-1.5 leading-snug">
+                    金融機関の公式サイトから最新の金利情報を取得します。月1回まで。
+                  </p>
+                </div>
               </div>
             </div>
           </div>

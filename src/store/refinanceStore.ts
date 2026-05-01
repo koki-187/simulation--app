@@ -17,6 +17,10 @@ export interface RefinanceState {
   areaFilter: string;         // '全エリア' | area
   rateTypeFilter: 'all' | '変動' | '固定';
   sortBy: 'savings' | 'breakeven' | 'rate' | 'fee';
+  // Rate refresh state
+  rateDataMonth: string | null;   // "YYYY-MM" (JST) of last successful refresh, null = never
+  refreshedRates: Record<string, number>;  // bankId → overridden rate
+  refreshDataDate: string | null;  // ISO date string of last refresh (for display)
   // actions
   set: (patch: Partial<Omit<RefinanceState, 'set'>>) => void;
 }
@@ -34,6 +38,9 @@ const DEFAULT: Omit<RefinanceState, 'set'> = {
   areaFilter: '全エリア',
   rateTypeFilter: '変動',
   sortBy: 'savings',
+  rateDataMonth: null,
+  refreshedRates: {},
+  refreshDataDate: null,
 };
 
 export const useRefinanceStore = create<RefinanceState>()(
