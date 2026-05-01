@@ -117,6 +117,22 @@ const ThreeConditionBadge = memo(function ThreeConditionBadge({ ok, label }: { o
   );
 });
 
+function dansinIcon(dansin: string): string {
+  if (dansin === 'がん100%無料') return '🩺';
+  if (dansin === 'がん50%無料') return '💊';
+  if (dansin === '充実団信') return '🛡️';
+  return '';
+}
+
+function getScore(r: RefinanceResult): number {
+  if (!r.isWorthwhile) return 1;
+  const savingScore = r.totalSavingsAll > 5_000_000 ? 2 : r.totalSavingsAll > 2_000_000 ? 1 : 0;
+  if (r.breakEvenMonths <= 24) return Math.min(5, 4 + savingScore);
+  if (r.breakEvenMonths <= 48) return Math.min(4, 3 + savingScore);
+  if (r.breakEvenMonths <= 72) return 3;
+  return 2;
+}
+
 export default function RefinancePage() {
   const {
     currentBalance, currentRate, remainingYears, prepaymentPenalty,
@@ -189,9 +205,12 @@ export default function RefinancePage() {
     }
   };
 
-  const effectiveRegistrationFee = autoRegistrationFee
-    ? estimateRegistrationFee(currentBalance)
-    : registrationFee;
+  const effectiveRegistrationFee = useMemo(
+    () => autoRegistrationFee ? estimateRegistrationFee(currentBalance) : registrationFee,
+    [autoRegistrationFee, currentBalance, registrationFee]
+  );
+
+  const currentBankExitFee = useMemo(() => findExitFee(currentBank), [currentBank]);
 
   const eligibleBanks = useMemo(() =>
     REFINANCE_BANKS_2026.filter(b => {
@@ -202,6 +221,11 @@ export default function RefinancePage() {
       );
     }),
     [showAllBanks, rateTypeFilter, currentRate, refreshedRates]
+  );
+
+  const bankDataMap = useMemo(
+    () => new Map(REFINANCE_BANKS_2026.map(b => [b.id, b])),
+    []
   );
 
   const input: RefinanceInput = {
@@ -220,7 +244,12 @@ export default function RefinancePage() {
       return calcRefinance(input, { id: b.id, name: b.name, rate: effectiveRate, fee: processingFee, rateType: b.rateType, areas: [] });
     }).sort((a, b_) => {
       if (sortBy === 'savings') return b_.totalSavingsAll - a.totalSavingsAll;
-      if (sortBy === 'breakeven') return a.breakEvenMonths - b_.breakEvenMonths;
+      if (sortBy === 'breakeven') {
+        if (a.breakEvenMonths === Infinity && b_.breakEvenMonths === Infinity) return 0;
+        if (a.breakEvenMonths === Infinity) return 1;
+        if (b_.breakEvenMonths === Infinity) return -1;
+        return a.breakEvenMonths - b_.breakEvenMonths;
+      }
       if (sortBy === 'rate') return a.newRate - b_.newRate;
       return a.processingFee - b_.processingFee;
     }),
@@ -236,9 +265,12 @@ export default function RefinancePage() {
     [results, scenarioDelta]
   );
 
-  const selectedResult = results.find(r => r.bankId === selectedBankId) ?? results[0] ?? null;
+  const selectedResult = useMemo(
+    () => results.find(r => r.bankId === selectedBankId) ?? results[0] ?? null,
+    [results, selectedBankId]
+  );
+  const bestResult = useMemo(() => results[0] ?? null, [results]);
   const months = remainingYears * 12;
-  const bestResult = results[0];
 
   const bestConditions = bestResult
     ? checkThreeConditions(currentRate, bestResult.newRate, remainingYears, currentBalance)
@@ -282,22 +314,6 @@ export default function RefinancePage() {
     if (currentMonthly <= 0) return 0;
     return currentMonthly * remainingYears * 12 - currentBalance;
   }, [currentMonthly, remainingYears, currentBalance]);
-
-  const getScore = (r: RefinanceResult): number => {
-    if (!r.isWorthwhile) return 1;
-    const savingScore = r.totalSavingsAll > 5_000_000 ? 2 : r.totalSavingsAll > 2_000_000 ? 1 : 0;
-    if (r.breakEvenMonths <= 24) return Math.min(5, 4 + savingScore);
-    if (r.breakEvenMonths <= 48) return Math.min(4, 3 + savingScore);
-    if (r.breakEvenMonths <= 72) return 3;
-    return 2;
-  };
-
-  const dansinIcon = (dansin: string) => {
-    if (dansin === 'がん100%無料') return '🩺';
-    if (dansin === 'がん50%無料') return '💊';
-    if (dansin === '充実団信') return '🛡️';
-    return '';
-  };
 
   const autoFeeBreakdown = useMemo(() => {
     const mortgageTax = Math.floor(currentBalance * 0.004);
@@ -380,25 +396,22 @@ export default function RefinancePage() {
                     placeholder="例：楽天銀行"
                     className="input-cell text-left"
                   />
-                  {(() => {
-                    const exitFee = findExitFee(currentBank);
-                    return exitFee ? (
-                      <p className="text-[10px] text-orange-600">
-                        💡 {exitFee.bankName}の繰上返済手数料を自動入力しました（{exitFee.notes}）
-                      </p>
-                    ) : null;
-                  })()}
+                  {currentBankExitFee ? (
+                    <p className="text-[10px] text-orange-600">
+                      💡 {currentBankExitFee.bankName}の繰上返済手数料を自動入力しました（{currentBankExitFee.notes}）
+                    </p>
+                  ) : null}
                 </div>
                 <NumberInput label="現在の残債" value={currentBalance / 10000}
-                  onChange={v => set({ currentBalance: v * 10000 })}
+                  onChange={v => set({ currentBalance: Math.max(0, v) * 10000 })}
                   min={100} max={100000} step={100} unit="万円"
                   hint={`残債 ${yenM(currentBalance)}`} />
                 <NumberInput label="現在の金利（年）" value={currentRate}
-                  onChange={v => set({ currentRate: v })}
+                  onChange={v => set({ currentRate: Math.max(0.01, Math.min(20, v)) })}
                   min={0.1} max={10} step={0.001} unit="%"
                   hint="変動金利は毎月更新されます" />
                 <NumberInput label="残返済期間" value={remainingYears}
-                  onChange={v => set({ remainingYears: Math.max(1, Math.min(50, v)) })}
+                  onChange={v => set({ remainingYears: Math.max(1, Math.min(50, Math.round(v))) })}
                   min={1} max={50} step={1} unit="年" />
                 <NumberInput label="現在の月返済額（参考）"
                   value={Math.round(currentMonthly)} readOnly unit="円" />
@@ -607,7 +620,7 @@ export default function RefinancePage() {
                     </thead>
                     <tbody>
                       {scenarioResults.map((r, i) => {
-                        const bankData = REFINANCE_BANKS_2026.find(b => b.id === r.bankId);
+                        const bankData = bankDataMap.get(r.bankId);
                         const isSelected = selectedBankId === r.bankId || (!selectedBankId && i === 0);
                         const isExpanded = expandedBankId === r.bankId;
                         const hasMinLoanWarning = bankData && currentBalance < bankData.minLoanAmount;

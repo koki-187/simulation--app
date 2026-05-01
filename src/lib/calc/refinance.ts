@@ -63,14 +63,18 @@ export interface RefinanceResult {
 }
 
 function calcMonthlyPayment(principal: number, annualRatePct: number, months: number): number {
-  if (annualRatePct <= 0) return principal / Math.max(months, 1);
+  if (principal <= 0 || months <= 0) return 0;
+  if (annualRatePct <= 0) return principal / months;
   const r = annualRatePct / 100 / 12;
-  return (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  const powered = Math.pow(1 + r, months);
+  if (!isFinite(powered) || powered === 1) return principal / months;
+  return (principal * r * powered) / (powered - 1);
 }
 
 function calcTotalInterest(principal: number, annualRatePct: number, months: number): number {
+  if (principal <= 0 || months <= 0) return 0;
   const monthly = calcMonthlyPayment(principal, annualRatePct, months);
-  return monthly * months - principal;
+  return Math.max(0, monthly * months - principal);
 }
 
 export function calcRefinance(
@@ -87,7 +91,9 @@ export function calcRefinance(
   const totalCost = bank.fee + input.prepaymentPenalty + input.registrationFee + input.otherFees;
 
   // 損益分岐点
-  const breakEvenMonths = monthlySavings > 0 ? Math.ceil(totalCost / monthlySavings) : Infinity;
+  const breakEvenMonths = monthlySavings > 0
+    ? Math.min(Math.ceil(totalCost / monthlySavings), 999)
+    : Infinity;
 
   // 節約総額
   const grossSavings = monthlySavings * months;
