@@ -13,51 +13,69 @@ async function exportComparePDF(
   aWins: number,
   bWins: number,
 ) {
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const NAVY: [number, number, number] = [28, 43, 74];
-  const ORANGE: [number, number, number] = [232, 99, 42];
-  const GREEN: [number, number, number] = [39, 174, 96];
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
 
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, 210, 18, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`TERASS A/B Pattern Comparison`, 14, 12);
+  const today = new Date().toLocaleDateString('ja-JP');
+  const winnerLabel = aWins > bWins
+    ? `A（${inputA.propertyName}）`
+    : aWins < bWins
+      ? `B（${inputB.propertyName}）`
+      : '引き分け';
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  const winner = aWins > bWins ? `A (${inputA.propertyName})` : `B (${inputB.propertyName})`;
-  doc.text(`Winner: Pattern ${winner} — ${Math.max(aWins, bWins)}/${rows.length} metrics`, 14, 17);
+  const tableRows = rows.map((r, i) => `
+    <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;font-weight:500;">${r.label}</td>
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;${r.betterA ? 'background:#F0FDF4;color:#16A34A;font-weight:bold;' : ''}">${r.fmtA}</td>
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:right;${!r.betterA ? 'background:#F0FDF4;color:#16A34A;font-weight:bold;' : ''}">${r.fmtB}</td>
+      <td style="padding:4px 8px;border:1px solid #E5E7EB;text-align:center;font-weight:bold;color:${r.betterA ? '#E8632A' : '#27AE60'};">${r.betterA ? 'A' : 'B'}</td>
+    </tr>
+  `).join('');
 
-  autoTable(doc, {
-    startY: 22,
-    head: [['指標', `A: ${inputA.propertyName}`, `B: ${inputB.propertyName}`, '優位']],
-    body: rows.map(r => [r.label, r.fmtA, r.fmtB, r.betterA ? 'A ◀' : '▶ B']),
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      1: { halign: 'right' as const },
-      2: { halign: 'right' as const },
-      3: { halign: 'center' as const, fontStyle: 'bold' },
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    didParseCell: (data: any) => {
-      if (data.section === 'body' && data.column.index === 3) {
-        const row = rows[data.row.index];
-        if (row) {
-          data.cell.styles.textColor = row.betterA ? [...ORANGE] : [...GREEN];
-        }
-      }
-    },
-    margin: { left: 14, right: 14 },
+  const html = `
+    <div style="padding:20px;">
+      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:12px;">
+        <div style="font-size:16px;font-weight:bold;">A/Bパターン比較レポート</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.8;">
+          パターンA: ${inputA.propertyName} ／ パターンB: ${inputB.propertyName} ／ 作成日: ${today}
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:12px;">
+        <div style="flex:1;text-align:center;padding:10px;border-radius:6px;border:2px solid ${aWins >= bWins ? '#E8632A' : '#E5E7EB'};">
+          <div style="font-size:11px;font-weight:bold;color:#E8632A;">パターンA — ${inputA.propertyName}</div>
+          <div style="font-size:28px;font-weight:bold;color:${aWins >= bWins ? '#E8632A' : '#1C2B4A'};">${aWins}</div>
+          <div style="font-size:10px;color:#6B7280;">指標でリード</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:10px;border-radius:6px;border:2px solid ${aWins < bWins ? '#E8632A' : '#E5E7EB'};">
+          <div style="font-size:11px;font-weight:bold;color:#1C2B4A;">パターンB — ${inputB.propertyName}</div>
+          <div style="font-size:28px;font-weight:bold;color:${bWins > aWins ? '#E8632A' : '#1C2B4A'};">${bWins}</div>
+          <div style="font-size:10px;color:#6B7280;">指標でリード</div>
+        </div>
+      </div>
+      <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:10px;color:#92400E;">
+        総合評価: パターン${winnerLabel}が${Math.max(aWins, bWins)}/${rows.length}指標でリード
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead>
+          <tr style="background:#1C2B4A;color:white;">
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:left;">指標</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">A: ${inputA.propertyName}</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">B: ${inputB.propertyName}</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:center;">優位</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div style="margin-top:12px;font-size:9px;color:#6B7280;">
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+      </div>
+    </div>
+  `;
+
+  await elementToPdf({
+    html,
+    filename: `TERASS_AB比較_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'portrait',
   });
-
-  const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
-  doc.save(`TERASS_AB比較_${dateStr}.pdf`);
 }
 
 export default function ComparePage() {

@@ -102,7 +102,7 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
 
       <Section title="6. 売却・保有">
         <NumInput label="保有年数" value={input.holdingYears} onChange={v => set({ holdingYears: Math.max(1, Math.min(50, v)) })} fmt="years" />
-        <NumInput label="年間資産成長率" value={input.growthRate} onChange={v => set({ growthRate: v })} fmt="percent" step={0.001} />
+        <NumInput label="年間資産成長率" value={input.growthRate} onChange={v => set({ growthRate: Math.max(-0.50, Math.min(0.30, v)) })} fmt="percent" step={0.001} min={-50} max={30} />
       </Section>
 
       <Section title="7. 年収情報（比率計算用）">

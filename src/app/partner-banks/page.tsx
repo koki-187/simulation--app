@@ -492,6 +492,172 @@ function SBIShinseiSection() {
   );
 }
 
+function RowkinSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">ろうきん（労働金庫） ＜全国＞</h3>
+        <Badge label="全国" color="bg-blue-500" />
+        <Badge label="会員向け優遇" color="bg-green-600" />
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>組合員・会員向け優遇金利（変動0.375%〜）</CheckItem>
+          <CheckItem>労働組合・生協組合員が対象（非組合員も入会で利用可）</CheckItem>
+          <CheckItem>会員向けの特別優遇あり</CheckItem>
+        </div>
+      </div>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>各都道府県労働金庫の窓口・Web
+      </InfoBox>
+    </div>
+  );
+}
+
+function ChuoRowkinSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">中央労働金庫 ＜首都圏＞</h3>
+        <Badge label="首都圏" color="bg-blue-500" />
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>首都圏エリア対応（1都3県・茨城・栃木・群馬・長野・新潟）</CheckItem>
+          <CheckItem>変動金利優遇（組合員向け）</CheckItem>
+        </div>
+      </div>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>窓口申込
+      </InfoBox>
+    </div>
+  );
+}
+
+function YokohamaBankSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">横浜銀行 ＜神奈川・東京＞</h3>
+        <Badge label="神奈川" color="bg-blue-500" />
+        <Badge label="東京" color="bg-blue-500" />
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>神奈川・東京エリアに強み</CheckItem>
+          <CheckItem>変動〜固定まで幅広い商品ラインナップ</CheckItem>
+          <CheckItem>土地先行融資（分割実行）対応可</CheckItem>
+        </div>
+      </div>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>アプリ・Web・窓口
+      </InfoBox>
+    </div>
+  );
+}
+
+function IonBankSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">イオン銀行 ＜全国＞</h3>
+        <Badge label="全国" color="bg-blue-500" />
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-neutral-500 text-sm">変動金利</span>
+        <span className="text-success-500 font-bold text-2xl">1.130%</span>
+        <span className="text-neutral-400 text-sm">（LTV≤80%）</span>
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>イオングループ利用者への優遇あり</CheckItem>
+          <CheckItem>がん100%保障団信が無料付帯</CheckItem>
+        </div>
+      </div>
+      <WarningBox>
+        全額繰上返済手数料 55,000円が発生します
+      </WarningBox>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>Web申込
+      </InfoBox>
+    </div>
+  );
+}
+
+function MizuhoBankSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">みずほ銀行 ＜全国＞</h3>
+        <Badge label="全国" color="bg-blue-500" />
+        <Badge label="メガバンク" color="bg-neutral-500" />
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-neutral-500 text-sm">変動金利</span>
+        <span className="text-success-500 font-bold text-2xl">1.025%</span>
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>大手メガバンクの安心感・全国対応</CheckItem>
+          <CheckItem>みずほダイレクトアプリで手続き可能</CheckItem>
+        </div>
+      </div>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>アプリ・窓口
+      </InfoBox>
+    </div>
+  );
+}
+
+function SMTBSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">三井住友信託銀行 ＜全国＞</h3>
+        <Badge label="全国" color="bg-blue-500" />
+        <Badge label="信託銀行" color="bg-neutral-500" />
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>信託銀行ならではの資産運用連携が強み</CheckItem>
+          <CheckItem>財産管理・相続など総合サービス提供</CheckItem>
+        </div>
+      </div>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>窓口
+      </InfoBox>
+    </div>
+  );
+}
+
+function YuchoBankSection() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="font-bold text-navy-500 text-base">ゆうちょ銀行 フラット35取扱 ＜全国＞</h3>
+        <Badge label="全国" color="bg-blue-500" />
+        <Badge label="フラット35" color="bg-green-600" />
+      </div>
+      <div>
+        <SectionHeader>特徴</SectionHeader>
+        <div className="space-y-1.5">
+          <CheckItem>全国の郵便局・ゆうちょ銀行でフラット35取扱</CheckItem>
+          <CheckItem>全期間固定で返済額が安定</CheckItem>
+        </div>
+      </div>
+      <InfoBox>
+        <span className="font-semibold">申込方法：</span>窓口
+      </InfoBox>
+    </div>
+  );
+}
+
 function Tab2App() {
   return (
     <div className="space-y-6">
@@ -501,6 +667,13 @@ function Tab2App() {
       <SMBCSection />
       <ResonaSection />
       <SBIShinseiSection />
+      <RowkinSection />
+      <ChuoRowkinSection />
+      <YokohamaBankSection />
+      <IonBankSection />
+      <MizuhoBankSection />
+      <SMTBSection />
+      <YuchoBankSection />
     </div>
   );
 }
@@ -515,6 +688,7 @@ function Tab3Doc() {
       email: 'tokyolc@chibabank.co.jp',
       tel: '03-5715-6391',
       method: '紙の申込書（HP DL）→エージェントがメール提出',
+      notes: '千葉・首都圏エリア対応',
     },
     {
       name: 'きらぼし銀行',
@@ -522,6 +696,7 @@ function Tab3Doc() {
       email: 'yanami@kiraboshibank.co.jp',
       tel: '03-3365-3436',
       method: '紙の申込書（HP DL）→エージェントがメール提出',
+      notes: '',
     },
     {
       name: 'ドコモファイナンス（フラット35）',
@@ -529,6 +704,7 @@ function Tab3Doc() {
       email: '',
       tel: '080-5892-0451',
       method: 'フラット35（オリックス）提携',
+      notes: '',
     },
     {
       name: 'スルガ銀行',
@@ -536,6 +712,7 @@ function Tab3Doc() {
       email: '',
       tel: '',
       method: '①住宅ローン（最大4億）②クレディセゾン保証（最大1億・おまとめ可）',
+      notes: '',
     },
     {
       name: '協同住宅ローン',
@@ -543,6 +720,23 @@ function Tab3Doc() {
       email: 'nonoshita-n@kyojyu.co.jp',
       tel: '03-5656-9804',
       method: '個信難・セカンドハウス可・1都3県・電子売買不可',
+      notes: '',
+    },
+    {
+      name: '埼玉りそな銀行',
+      contact: '埼玉・首都圏エリア担当窓口',
+      email: '',
+      tel: '',
+      method: '書類申込・窓口',
+      notes: '埼玉・首都圏エリア対応。マイゲート経由で繰上返済手数料無料',
+    },
+    {
+      name: 'SBI新生銀行（書類申込）',
+      contact: '',
+      email: '',
+      tel: '',
+      method: '書類申込',
+      notes: '5年ルール・1.25倍ルールなし（金利変動即反映）、繰上返済無料、変動金利1.080%',
     },
   ];
 
@@ -551,10 +745,13 @@ function Tab3Doc() {
       {banks.map((bank) => (
         <div key={bank.name} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <div className="font-bold text-navy-500 text-base mb-2">{bank.name}</div>
+          {bank.notes && (
+            <div className="text-xs text-neutral-500 mb-2 bg-neutral-50 rounded px-2 py-1">{bank.notes}</div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-neutral-700">
             <div>
               <div className="text-neutral-400 text-xs mb-1">担当</div>
-              <div>{bank.contact}</div>
+              <div>{bank.contact || '—'}</div>
               {bank.tel && (
                 <div className="mt-1">
                   <a href={`tel:${bank.tel.replace(/-/g, '')}`} className="text-navy-500 hover:underline">

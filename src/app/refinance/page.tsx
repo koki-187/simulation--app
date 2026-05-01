@@ -29,48 +29,57 @@ async function exportRefinancePDF(
   input: RefinanceInput,
   currentBank: string
 ) {
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const NAVY: [number, number, number] = [28, 43, 74];
-  const pageW = doc.internal.pageSize.getWidth();
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
 
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, pageW, 18, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('TERASS 借り換えシミュレーション結果', 14, 12);
+  const today = new Date().toLocaleDateString('ja-JP');
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(
-    `現行: ${currentBank} / 残債 ${yenM(input.currentBalance)} / 金利 ${pct(input.currentRate)} / 残${input.remainingYears}年`,
-    14,
-    17
-  );
+  const tableRows = results.slice(0, 15).map((r, i) => `
+    <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;">${r.bankName}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:center;color:#16A34A;font-weight:bold;">${pct(r.newRate)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:#16A34A;">${yenM(r.monthlySavings)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">${yenM(r.processingFee)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">${yenM(r.totalCost)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:center;">${r.breakEvenMonths === Infinity ? '—' : r.breakEvenMonths + 'ヶ月'}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.totalSavingsAll > 0 ? '#16A34A' : '#DC2626'};font-weight:bold;">${yenM(r.totalSavingsAll)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:center;">${r.isWorthwhile ? '◎' : '△'}</td>
+    </tr>
+  `).join('');
 
-  autoTable(doc, {
-    startY: 22,
-    head: [['銀行名', '金利', '月削減額', '事務手数料', '総費用', '損益分岐', '総節約額（費用後）', '評価']],
-    body: results.slice(0, 15).map(r => [
-      r.bankName,
-      pct(r.newRate),
-      yenM(r.monthlySavings),
-      yenM(r.processingFee),
-      yenM(r.totalCost),
-      r.breakEvenMonths === Infinity ? '—' : r.breakEvenMonths + 'ヶ月',
-      yenM(r.totalSavingsAll),
-      r.isWorthwhile ? '◎' : '△',
-    ]),
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, textColor: [255, 255, 255] as [number, number, number], fontSize: 7, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 7 },
-    margin: { left: 10, right: 10 },
+  const html = `
+    <div style="padding:20px;">
+      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:8px;">
+        <div style="font-size:16px;font-weight:bold;">借り換えシミュレーション結果</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.8;">
+          現行: ${currentBank} ／ 残債 ${yenM(input.currentBalance)} ／ 金利 ${pct(input.currentRate)} ／ 残${input.remainingYears}年 ／ 作成日: ${today}
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:9px;">
+        <thead>
+          <tr style="background:#1C2B4A;color:white;">
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:left;">銀行名</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:center;">金利</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">月削減額</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">事務手数料</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">総費用</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:center;">損益分岐</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">総節約額（費用後）</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:center;">評価</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div style="margin-top:12px;font-size:9px;color:#6B7280;">
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+      </div>
+    </div>
+  `;
+
+  await elementToPdf({
+    html,
+    filename: `TERASS_借り換え比較_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'landscape',
   });
-
-  const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
-  doc.save(`TERASS_借り換え比較_${dateStr}.pdf`);
 }
 
 function NumberInput({
@@ -334,26 +343,54 @@ export default function RefinancePage() {
             📅 データ基準日：{refreshDataDate
               ? new Date(refreshDataDate).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' }) + '時点の金利水準'
               : '2026年5月1日時点の金利水準'}
+            {rateDataMonth && (
+              <span className="ml-1">（{rateDataMonth.replace(/^(\d{4})-0?(\d+)$/, '$1年$2月')}更新済）</span>
+            )}
           </p>
         </div>
-        <button
-          onClick={async () => {
-            setPdfLoading(true);
-            try {
-              await exportRefinancePDF(results, input, currentBank);
-            } catch (e) {
-              console.error(e);
-              alert('PDF出力エラー');
-            } finally {
-              setPdfLoading(false);
-            }
-          }}
-          disabled={pdfLoading || results.length === 0}
-          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
-        >
-          {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 金利更新ボタン */}
+          <button
+            onClick={handleRefreshRates}
+            disabled={isRefreshing || isAlreadyUpdatedThisMonth}
+            className={`text-xs px-3 py-1.5 rounded font-medium transition-all ${
+              isAlreadyUpdatedThisMonth
+                ? 'bg-navy-600 text-navy-300 cursor-not-allowed'
+                : isRefreshing
+                  ? 'bg-navy-600 text-white cursor-wait'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+            }`}
+          >
+            {isRefreshing ? '⏳ 更新中...' : isAlreadyUpdatedThisMonth
+              ? `✅ ${rateDataMonth?.replace(/^(\d{4})-0?(\d+)$/, '$1年$2月')} 更新済み`
+              : '🔄 金利を最新化'}
+          </button>
+          {/* PDF出力ボタン */}
+          <button
+            onClick={async () => {
+              setPdfLoading(true);
+              try {
+                await exportRefinancePDF(results, input, currentBank);
+              } catch (e) {
+                console.error(e);
+                alert('PDF出力エラー');
+              } finally {
+                setPdfLoading(false);
+              }
+            }}
+            disabled={pdfLoading || results.length === 0}
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+          >
+            {pdfLoading ? '⏳ 生成中...' : '📄 PDF出力'}
+          </button>
+        </div>
       </div>
+      {/* 更新結果トースト */}
+      {(refreshResult || refreshError) && (
+        <div className={`mx-6 mt-2 px-4 py-2 rounded-lg text-sm ${refreshError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+          {refreshError ? `⚠️ ${refreshError}` : `✅ ${refreshResult?.foundCount}/${refreshResult?.total}行を更新しました`}
+        </div>
+      )}
 
       <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
 
@@ -514,52 +551,11 @@ export default function RefinancePage() {
                   <span className="text-xs text-neutral-600">現在金利以上の銀行も参考表示</span>
                 </label>
 
-                {/* Rate refresh panel */}
-                <div className="bg-navy-50 border border-navy-200 rounded-lg p-3 mt-1">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-bold text-navy-600">📡 金利データ更新</span>
-                    {rateDataMonth && (
-                      <span className="text-[10px] text-navy-400">
-                        {rateDataMonth.replace(/^(\d{4})-(\d{2})$/, '$1年$2月')}更新済
-                      </span>
-                    )}
-                  </div>
-                  {Object.keys(refreshedRates).length > 0 && (
-                    <p className="text-[10px] text-success-600 mb-1.5">
-                      ✅ {Object.keys(refreshedRates).length}行の金利を最新データで表示中
-                    </p>
-                  )}
-                  <button
-                    onClick={handleRefreshRates}
-                    disabled={isRefreshing || isAlreadyUpdatedThisMonth}
-                    className={`w-full text-[11px] py-2 px-3 rounded border font-medium transition-all ${
-                      isAlreadyUpdatedThisMonth
-                        ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
-                        : isRefreshing
-                          ? 'bg-navy-100 text-navy-500 border-navy-200 cursor-wait'
-                          : 'bg-navy-500 text-white border-navy-500 hover:bg-navy-600 active:bg-navy-700'
-                    }`}
-                  >
-                    {isRefreshing
-                      ? '⏳ 調査中... (最大20秒)'
-                      : isAlreadyUpdatedThisMonth
-                        ? `✅ ${rateDataMonth?.replace(/^(\d{4})-0?(\d{1,2})$/, '$1年$2月')} 更新済み`
-                        : '🔄 最新の金利状況を反映'}
-                  </button>
-                  {refreshResult && (
-                    <p className="text-[10px] text-success-600 mt-1.5">
-                      {refreshResult.foundCount}/{refreshResult.total}行を更新しました
-                    </p>
-                  )}
-                  {refreshError && (
-                    <p className="text-[10px] text-danger-500 mt-1.5">
-                      ⚠ {refreshError}
-                    </p>
-                  )}
-                  <p className="text-[10px] text-neutral-400 mt-1.5 leading-snug">
-                    金融機関の公式サイトから最新の金利情報を取得します。月1回まで。
+                {Object.keys(refreshedRates).length > 0 && (
+                  <p className="text-[10px] text-success-600">
+                    ✅ {Object.keys(refreshedRates).length}行の金利を最新データで表示中
                   </p>
-                </div>
+                )}
               </div>
             </div>
           </div>

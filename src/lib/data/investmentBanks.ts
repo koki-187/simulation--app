@@ -25,7 +25,8 @@ export interface InvestmentBank {
   corporateOk: boolean;
   features: string;
   contact: string;            // 相談申込方法
-  fee: string;                // 事務手数料
+  fee: string;                // 事務手数料（テキスト）
+  prepaymentFee?: number;     // 繰上返済手数料（円）。0=無料、undefined=不明
   dansin: boolean;
   foreigners: string;
   minpaku: boolean | string;

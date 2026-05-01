@@ -16,34 +16,52 @@ type AnnualRow = {
 };
 
 async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
-  const yenFmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const NAVY: [number, number, number] = [28, 43, 74];
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
 
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, 210, 18, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`TERASS Amortization Schedule — ${input.propertyName}`, 14, 12);
+  const fmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
+  const today = new Date().toLocaleDateString('ja-JP');
 
-  autoTable(doc, {
-    startY: 22,
-    head: [['年', '年間返済額', 'うち利息', 'うち元金', '残高', '累計利息']],
-    body: annualRows.map(r => [
-      r.year + '年',
-      yenFmt(r.totalPayment), yenFmt(r.totalInterest),
-      yenFmt(r.totalPrincipal), yenFmt(r.endBalance), yenFmt(r.cumInterest),
-    ]),
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 8 },
-    margin: { left: 14, right: 14 },
+  const tableRows = annualRows.map((r, i) => `
+    <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+      <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:center;font-weight:bold;">${r.year}年</td>
+      <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;">${fmt(r.totalPayment)}</td>
+      <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;color:#DC2626;">${fmt(r.totalInterest)}</td>
+      <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;color:#16A34A;">${fmt(r.totalPrincipal)}</td>
+      <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${fmt(r.endBalance)}</td>
+      <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;color:#6B7280;">${fmt(r.cumInterest)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <div style="padding:20px;">
+      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:bold;">返済スケジュール</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.8;">物件: ${input.propertyName} ／ 作成日: ${today}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead>
+          <tr style="background:#1C2B4A;color:white;">
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:center;">年</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">年間返済額</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">うち利息</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">うち元金</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">残高</th>
+            <th style="padding:5px 8px;border:1px solid #374151;text-align:right;">累計利息</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div style="margin-top:12px;font-size:9px;color:#6B7280;">
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+      </div>
+    </div>
+  `;
+
+  await elementToPdf({
+    html,
+    filename: `TERASS_返済スケジュール_${input.propertyName}_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'portrait',
   });
-
-  doc.save(`TERASS_返済スケジュール_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
 }
 
 export default function AmortizationPage() {

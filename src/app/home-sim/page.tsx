@@ -463,101 +463,87 @@ export default function HomeSimPage() {
 
   // PDF export
   async function exportHomeLoanPDF() {
-    const { jsPDF } = await import('jspdf');
-    const { default: autoTable } = await import('jspdf-autotable');
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = doc.internal.pageSize.getWidth();
-    const NAVY: [number, number, number] = [28, 43, 74];
-    const ORANGE: [number, number, number] = [232, 99, 42];
+    const { elementToPdf } = await import('@/lib/pdf/jpdf');
 
-    // Header
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, pageW, 20, 'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(13);
-    doc.setFont('helvetica','bold');
-    const titleName = propertyName ? ` — ${propertyName}` : '';
-    doc.text(`TERASS Housing Loan Simulation Report${titleName}`, 14, 9);
-    doc.setFontSize(8);
-    doc.setFont('helvetica','normal');
-    doc.text(`Generated: ${new Date().toLocaleDateString('ja-JP')}`, 14, 16);
+    const today = new Date().toLocaleDateString('ja-JP');
+    const fmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
 
-    let curY = 26;
+    const overviewRows = [
+      ['物件価格', fmt(propertyPrice * 10000)],
+      ['自己資金', fmt(equity * 10000)],
+      ['諸費用', fmt(expenses * 10000)],
+      ['借入金額', fmt(loanAmount * 10000)],
+      ['金利タイプ', rateType + '金利'],
+      ['適用金利', `${annualRate}%`],
+      ['借入期間', `${termYears}年`],
+      ['月々返済額', fmt(result.rows[0]?.payment ?? 0)],
+      ['総返済額', fmt(result.totalPayment)],
+      ['総利息', fmt(result.totalInterest)],
+      ['返済比率', `${repaymentRatio.toFixed(1)}%`],
+    ].map(([label, value], i) => `
+      <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+        <td style="padding:4px 10px;border:1px solid #E5E7EB;font-weight:500;color:#374151;">${label}</td>
+        <td style="padding:4px 10px;border:1px solid #E5E7EB;text-align:right;font-weight:600;">${value}</td>
+      </tr>
+    `).join('');
 
-    // Section 1: Property & Loan Overview
-    doc.setFillColor(...ORANGE);
-    doc.rect(14, curY, 4, 6, 'F');
-    doc.setTextColor(...NAVY);
-    doc.setFontSize(11);
-    doc.setFont('helvetica','bold');
-    doc.text('1. Property & Loan Overview', 20, curY + 4.5);
-    curY += 10;
+    const deductionSection = deductionEnabled && deductionTable.length > 0 ? `
+      <div style="margin-top:20px;">
+        <div style="background:#E8632A;color:white;padding:6px 12px;border-radius:4px;margin-bottom:8px;font-size:12px;font-weight:bold;">
+          住宅ローン控除（13年間）
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <thead>
+            <tr style="background:#1C2B4A;color:white;">
+              <th style="padding:4px 8px;border:1px solid #374151;text-align:center;">年目</th>
+              <th style="padding:4px 8px;border:1px solid #374151;text-align:right;">年末残高</th>
+              <th style="padding:4px 8px;border:1px solid #374151;text-align:center;">控除率</th>
+              <th style="padding:4px 8px;border:1px solid #374151;text-align:right;">控除額</th>
+              <th style="padding:4px 8px;border:1px solid #374151;text-align:right;">実質年間返済</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${deductionTable.map((r, i) => `
+              <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+                <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:center;font-weight:bold;">${r.year}年目</td>
+                <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;">${fmt(r.yearEndBalance * 10000)}</td>
+                <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:center;">0.7%</td>
+                <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;color:#16A34A;font-weight:600;">${fmt(r.deduction)}</td>
+                <td style="padding:3px 8px;border:1px solid #E5E7EB;text-align:right;">${fmt(r.effectiveAnnual)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '';
 
-    autoTable(doc, {
-      startY: curY,
-      head: [['Item', 'Value']],
-      body: [
-        ['Property Price', `¥${(propertyPrice * 10000).toLocaleString()}`],
-        ['Equity', `¥${(equity * 10000).toLocaleString()}`],
-        ['Expenses', `¥${(expenses * 10000).toLocaleString()}`],
-        ['Loan Amount', `¥${(loanAmount * 10000).toLocaleString()}`],
-        ['Rate Type', rateType],
-        ['Annual Rate', `${annualRate}%`],
-        ['Term', `${termYears} years`],
-        ['Monthly Payment', `¥${Math.round(result.rows[0]?.payment ?? 0).toLocaleString()}`],
-        ['Total Repayment', `¥${Math.round(result.totalPayment).toLocaleString()}`],
-        ['Total Interest', `¥${Math.round(result.totalInterest).toLocaleString()}`],
-        ['Repayment Ratio', `${repaymentRatio.toFixed(1)}%`],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: NAVY, textColor: [255,255,255], fontSize: 8, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 8 },
-      margin: { left: 14, right: 14 },
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    curY = (doc as any).lastAutoTable.finalY + 6;
-
-    // Section 2: Housing Loan Deduction
-    if (deductionEnabled && curY < 220) {
-      doc.setFillColor(...ORANGE);
-      doc.rect(14, curY, 4, 6, 'F');
-      doc.setTextColor(...NAVY);
-      doc.setFontSize(11);
-      doc.setFont('helvetica','bold');
-      doc.text('2. Housing Loan Tax Deduction (13 years)', 20, curY + 4.5);
-      curY += 10;
-
-      const dedRows = deductionTable.map((r, i) => [
-        `Year ${i+1}`,
-        `¥${Math.round(r.yearEndBalance * 10000).toLocaleString()}`,
-        '0.7%',
-        `¥${Math.round(r.deduction).toLocaleString()}`,
-        `¥${Math.round(r.effectiveAnnual).toLocaleString()}`,
-      ]);
-      autoTable(doc, {
-        startY: curY,
-        head: [['Year', 'Year-End Balance', 'Rate', 'Deduction', 'Effective Annual Payment']],
-        body: dedRows,
-        theme: 'grid',
-        headStyles: { fillColor: NAVY, textColor: [255,255,255], fontSize: 7, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 7 },
-        margin: { left: 14, right: 14 },
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      curY = (doc as any).lastAutoTable.finalY + 6;
-    }
-
-    // Footer
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 287, pageW, 10, 'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(7);
-    doc.setFont('helvetica','normal');
-    doc.text('TERASS 住宅ローンシミュレーター — 本資料は試算値であり、投資助言ではありません。', 14, 293);
-    doc.text('Page 1', pageW - 18, 293);
+    const html = `
+      <div style="padding:20px;">
+        <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:bold;">住宅ローンシミュレーションレポート</div>
+          <div style="font-size:11px;margin-top:4px;opacity:0.8;">
+            ${propertyName ? `物件: ${propertyName} ／ ` : ''}作成日: ${today}
+          </div>
+        </div>
+        <div style="margin-bottom:12px;font-size:13px;font-weight:bold;color:#1C2B4A;border-left:4px solid #E8632A;padding-left:8px;">
+          物件・ローン概要
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tbody>${overviewRows}</tbody>
+        </table>
+        ${deductionSection}
+        <div style="margin-top:16px;font-size:9px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:8px;">
+          ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+        </div>
+      </div>
+    `;
 
     const nameSlug = propertyName ? `_${propertyName}` : '';
-    doc.save(`TERASS_住宅ローン${nameSlug}_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.pdf`);
+    await elementToPdf({
+      html,
+      filename: `TERASS_住宅ローン${nameSlug}_${today.replace(/\//g, '')}.pdf`,
+      orientation: 'portrait',
+    });
   }
 
   return (
@@ -1065,7 +1051,7 @@ export default function HomeSimPage() {
           )}
 
           {/* Row 4: 返済内訳グラフ */}
-          <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+          <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4 overflow-hidden">
             <p className="text-sm font-bold text-navy-500 mb-3">返済内訳グラフ（元金残高 vs 累計利息）</p>
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
@@ -1111,7 +1097,7 @@ export default function HomeSimPage() {
 
           {/* Row 5: 繰上げ返済効果 */}
           {prepayEffect && (
-            <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4 overflow-hidden">
               <p className="text-sm font-bold text-navy-500 mb-3">⏩ 繰上げ返済効果</p>
 
               <div className="grid grid-cols-2 gap-3 mb-4">

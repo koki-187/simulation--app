@@ -24,7 +24,7 @@ function calcSaleRow(
   initialInvestment: number,
   opts: CalcOptions,
 ): { pessimistic: SaleScenario; standard: SaleScenario; optimistic: SaleScenario } {
-  const baseSale = Math.floor(propertyPrice * Math.pow(1 + growthRate, year));
+  const baseSale = Math.max(0, Math.floor(propertyPrice * Math.pow(1 + growthRate, year)));
   const defs = [
     { label: '悲観 (−10%)', multiplier: 0.9 },
     { label: '標準',         multiplier: 1.0 },

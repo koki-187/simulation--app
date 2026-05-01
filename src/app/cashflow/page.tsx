@@ -8,37 +8,58 @@ import { CFRow, SimInput } from '@/lib/calc/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 async function exportCashflowPDF(rows: CFRow[], input: SimInput) {
-  const yenFmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-  const NAVY: [number, number, number] = [28, 43, 74];
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
 
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, pageW, 18, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`TERASS Cash Flow Analysis — ${input.propertyName}`, 14, 12);
+  const fmt = (n: number) => Math.round(n).toLocaleString('ja-JP');
+  const today = new Date().toLocaleDateString('ja-JP');
 
-  autoTable(doc, {
-    startY: 22,
-    head: [['年', '家賃収入', '運営費', '運営CF', 'ローン返済', '税金', '税引後CF', '累計CF', '残債']],
-    body: rows.map(r => [
-      r.year + '年',
-      yenFmt(r.rentalIncome), yenFmt(r.managementCosts),
-      yenFmt(r.operatingCF), yenFmt(r.annualLoanPayment),
-      yenFmt(r.incomeTax), yenFmt(r.afterTaxCF),
-      yenFmt(r.cumulativeCF), yenFmt(r.loanBalance),
-    ]),
-    theme: 'grid',
-    headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 7 },
-    margin: { left: 10, right: 10 },
+  const tableRows = rows.map(r => `
+    <tr style="background:${r.cumulativeCF >= 0 && (rows[r.year - 2]?.cumulativeCF ?? -1) < 0 ? '#FFF7ED' : r.year % 2 === 0 ? '#F9FAFB' : 'white'}">
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;">${r.year}年</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.rentalIncome)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.managementCosts)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.operatingCF >= 0 ? '#16A34A' : '#DC2626'};">¥${fmt(r.operatingCF)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.annualLoanPayment)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.incomeTax > 0 ? '#DC2626' : '#111827'};">¥${fmt(r.incomeTax)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.afterTaxCF >= 0 ? '#16A34A' : '#DC2626'};">¥${fmt(r.afterTaxCF)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.cumulativeCF >= 0 ? '#16A34A' : '#DC2626'};font-weight:bold;">¥${fmt(r.cumulativeCF)}</td>
+      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.loanBalance)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <div style="padding:20px;">
+      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:bold;">キャッシュフロー分析</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.8;">物件: ${input.propertyName} ／ 作成日: ${today}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:9px;">
+        <thead>
+          <tr style="background:#1C2B4A;color:white;">
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:left;">年</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">家賃収入</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">運営費</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">運営CF</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">ローン返済</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">税金</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">税引後CF</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">累計CF</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">残債</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div style="margin-top:12px;font-size:9px;color:#6B7280;">
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+      </div>
+    </div>
+  `;
+
+  await elementToPdf({
+    html,
+    filename: `TERASS_CF_${input.propertyName}_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'landscape',
   });
-
-  doc.save(`TERASS_CF_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`);
 }
 
 function exportCashflowCSV(rows: CFRow[], input: SimInput) {
@@ -66,20 +87,22 @@ export default function CashFlowPage() {
     useShallow(s => ({ resultA: s.resultA, resultB: s.resultB, activePattern: s.activePattern }))
   );
   const result = activePattern === 'B' ? resultB : resultA;
-  const rows = result.cashFlows.slice(0, 30);
+  const rows = result.cashFlows; // 全期間を表示
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  const chartData = useMemo(() => rows.map(r => ({
-    year: r.year + '年',
-    '運営CF': Math.round(r.operatingCF / 10000),
-    '税引後CF': Math.round(r.afterTaxCF / 10000),
-    '累計CF': Math.round(r.cumulativeCF / 10000),
-  })), [rows]);
+  const chartData = useMemo(() => rows
+    .filter(r => r.year === 1 || r.year % 5 === 0)
+    .map(r => ({
+      year: r.year + '年',
+      '運営CF': Math.round(r.operatingCF / 10000),
+      '税引後CF': Math.round(r.afterTaxCF / 10000),
+      '累計CF': Math.round(r.cumulativeCF / 10000),
+    })), [rows]);
 
   return (
     <AppShell>
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">
-        <div><h1 className="text-lg font-bold">キャッシュフロー分析</h1><p className="text-xs text-navy-100">30年間の年次収支</p></div>
+        <div><h1 className="text-lg font-bold">キャッシュフロー分析</h1><p className="text-xs text-navy-100">全期間の年次収支</p></div>
         <div className="flex items-center gap-3">
           <button
             onClick={async () => {
@@ -100,20 +123,22 @@ export default function CashFlowPage() {
         </div>
       </div>
       <div className="p-6 space-y-6">
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
+        <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
           <h3 className="text-sm font-bold text-navy-500 mb-3">年次CF推移（万円）</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-              <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={4} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <ReferenceLine y={0} stroke="#667085" strokeDasharray="3 3" />
-              <Bar dataKey="運営CF" fill="#1C2B4A" radius={[2,2,0,0]} />
-              <Bar dataKey="税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="overflow-hidden">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
+                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v.toLocaleString('ja-JP')} width={60} />
+                <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <ReferenceLine y={0} stroke="#667085" strokeDasharray="3 3" />
+                <Bar dataKey="運営CF" fill="#1C2B4A" radius={[2,2,0,0]} />
+                <Bar dataKey="税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card overflow-hidden">

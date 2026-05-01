@@ -141,10 +141,10 @@ export default function Dashboard() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Annual CF Chart */}
-          <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
+          <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-navy-500 mb-3">年次税引後キャッシュフロー（万円）</h3>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={cfData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <BarChart data={cfData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={3} />
                 <YAxis tick={{ fontSize: 10 }} />
@@ -157,10 +157,10 @@ export default function Dashboard() {
           </div>
 
           {/* Cumulative CF Chart */}
-          <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
+          <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-navy-500 mb-3">累計キャッシュフロー（万円）</h3>
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={cfData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <AreaChart data={cfData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
                 <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={3} />
                 <YAxis tick={{ fontSize: 10 }} />

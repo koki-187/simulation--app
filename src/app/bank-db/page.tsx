@@ -132,6 +132,16 @@ function BankCard({ bank }: { bank: InvestmentBank }) {
         </div>
       </div>
 
+      {/* 手数料情報 */}
+      <div className="flex gap-3 text-xs text-neutral-600 mt-1 border-t border-neutral-100 pt-1">
+        {bank.fee && (
+          <span>事務手数料: <strong>{bank.fee}</strong></span>
+        )}
+        {bank.prepaymentFee !== undefined && (
+          <span>繰上返済: <strong>{bank.prepaymentFee === 0 ? '無料' : `¥${bank.prepaymentFee.toLocaleString()}`}</strong></span>
+        )}
+      </div>
+
       {/* Contact */}
       {!wmt && (
         <div className="border-t border-gray-100 pt-2 text-xs text-gray-500 space-y-0.5">

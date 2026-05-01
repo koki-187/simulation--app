@@ -34,7 +34,7 @@ export function simulate(input: SimInput): SimResult {
   // ── Annual Cash Flows ─────────────────────────────────────────────────────────
   let cumCF = 0;
   const cashFlows: CFRow[] = [];
-  const totalYears = Math.max(holdingYears, 30);
+  const totalYears = Math.max(holdingYears, termYears, 45);
 
   for (let y = 1; y <= totalYears; y++) {
     const rental = effectiveMonthlyRent * 12;
