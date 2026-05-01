@@ -1,0 +1,103 @@
+export const dynamic = 'force-dynamic';
+
+interface ParsedRates {
+  [bankId: string]: number;
+}
+
+// Japanese bank name → internal bankId mapping (partial match)
+const BANK_NAME_TO_ID: Array<[string, string]> = [
+  ['PayPay銀行', 'paypay'],
+  ['ペイペイ銀行', 'paypay'],
+  ['住信SBIネット銀行', 'sbi-sumishin'],
+  ['住信SBI', 'sbi-sumishin'],
+  ['auじぶん銀行', 'au-jibun'],
+  ['auじぶん', 'au-jibun'],
+  ['ソニー銀行', 'sony'],
+  ['三菱UFJ銀行', 'mufg'],
+  ['三菱UFJ', 'mufg'],
+  ['みずほ銀行', 'mizuho'],
+  ['イオン銀行', 'aeon'],
+  ['三井住友銀行', 'smbc'],
+  ['三井住友', 'smbc'],
+  ['楽天銀行', 'rakuten'],
+  ['SBI新生銀行', 'sbi-shinsei'],
+  ['新生銀行', 'sbi-shinsei'],
+  ['りそな銀行', 'resona'],
+  ['埼玉りそな銀行', 'resona'],
+];
+
+const VALID_RATE_MIN = 0.1;
+const VALID_RATE_MAX = 5.0;
+
+function matchBankName(text: string): string | null {
+  for (const [name, id] of BANK_NAME_TO_ID) {
+    if (text.includes(name)) return id;
+  }
+  return null;
+}
+
+function parseCSVRow(line: string): string[] {
+  const fields: string[] = [];
+  let field = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuote) {
+      if (ch === '"' && line[i + 1] === '"') { field += '"'; i++; continue; }
+      if (ch === '"') { inQuote = false; continue; }
+      field += ch;
+    } else {
+      if (ch === '"') { inQuote = true; continue; }
+      if (ch === ',') { fields.push(field); field = ''; continue; }
+      field += ch;
+    }
+  }
+  fields.push(field);
+  return fields;
+}
+
+export async function POST(req: Request) {
+  try {
+    const text = await req.text();
+    // Remove BOM
+    const csv = text.replace(/^﻿/, '');
+    const lines = csv.split('\n').filter(l => l.trim());
+
+    const rates: ParsedRates = {};
+    let parsedCount = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const fields = parseCSVRow(lines[i]);
+      if (fields.length < 4) continue;
+
+      // CSV columns: No, 銀行名, 種別, 金利, ...
+      const bankName = fields[1]?.trim() ?? '';
+      const rateStr = fields[3]?.trim() ?? '';
+
+      const rateMatch = rateStr.match(/(\d+\.\d+)/);
+      if (!rateMatch) continue;
+
+      const rate = parseFloat(rateMatch[1]);
+      if (isNaN(rate) || rate < VALID_RATE_MIN || rate > VALID_RATE_MAX) continue;
+
+      const bankId = matchBankName(bankName);
+      if (bankId && !rates[bankId]) {
+        rates[bankId] = rate;
+      }
+      parsedCount++;
+    }
+
+    return Response.json({
+      success: true,
+      rates,
+      count: parsedCount,
+      matchedBanks: Object.keys(rates).length,
+    });
+  } catch (error) {
+    console.error('[upload-rates] Error:', error);
+    return Response.json(
+      { success: false, error: 'CSVの解析に失敗しました' },
+      { status: 500 }
+    );
+  }
+}

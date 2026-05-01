@@ -168,7 +168,7 @@ export default function RefinancePage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [refreshResult, setRefreshResult] = useState<{ foundCount: number; total: number } | null>(null);
+  const [refreshResult, setRefreshResult] = useState<string | null>(null);
 
   const currentMonthJST = useMemo(() => {
     const now = new Date();
@@ -206,12 +206,33 @@ export default function RefinancePage() {
         refreshedRates: { ...currentRates, ...validRates },
         refreshDataDate: data.updatedAt,
       });
-      setRefreshResult({ foundCount: data.foundCount, total: data.totalBanks });
+      setRefreshResult(`✅ ${data.foundCount}/${data.totalBanks}行を更新しました`);
     } catch (e) {
       setRefreshError(e instanceof Error ? e.message : '更新エラー');
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const res = await fetch('/api/upload-rates', { method: 'POST', body: text });
+      const data = await res.json();
+      if (data.success && data.rates) {
+        const currentRates = useRefinanceStore.getState().refreshedRates;
+        set({ refreshedRates: { ...currentRates, ...data.rates }, refreshDataDate: new Date().toISOString() });
+        setRefreshResult(`✅ ${data.count}行のCSVから金利を更新しました（${data.matchedBanks}行マッチ）`);
+      } else {
+        setRefreshError(data.error ?? 'CSVの処理に失敗しました');
+      }
+    } catch {
+      setRefreshError('CSVアップロードエラー');
+    }
+    // Reset input so same file can be re-uploaded
+    e.target.value = '';
   };
 
   const effectiveRegistrationFee = useMemo(
@@ -365,6 +386,16 @@ export default function RefinancePage() {
               ? `✅ ${rateDataMonth?.replace(/^(\d{4})-0?(\d+)$/, '$1年$2月')} 更新済み`
               : '🔄 金利を最新化'}
           </button>
+          {/* CSVアップロードボタン */}
+          <label className="cursor-pointer text-xs px-3 py-1.5 rounded font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors">
+            📂 CSVアップロード
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleCsvUpload}
+            />
+          </label>
           {/* PDF出力ボタン */}
           <button
             onClick={async () => {
@@ -388,7 +419,7 @@ export default function RefinancePage() {
       {/* 更新結果トースト */}
       {(refreshResult || refreshError) && (
         <div className={`mx-6 mt-2 px-4 py-2 rounded-lg text-sm ${refreshError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
-          {refreshError ? `⚠️ ${refreshError}` : `✅ ${refreshResult?.foundCount}/${refreshResult?.total}行を更新しました`}
+          {refreshError ? `⚠️ ${refreshError}` : refreshResult}
         </div>
       )}
 

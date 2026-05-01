@@ -139,6 +139,17 @@ function getCurrentMonthJST(): string {
   return `${year}-${month}`;
 }
 
+import { LOAN_CHECKER_BANKS, LOAN_CHECKER_UPDATED } from '@/lib/data/loanCheckerBanks';
+
+export async function GET() {
+  return Response.json({
+    success: true,
+    banks: LOAN_CHECKER_BANKS,
+    updatedAt: LOAN_CHECKER_UPDATED,
+    totalBanks: LOAN_CHECKER_BANKS.length,
+  });
+}
+
 export async function POST() {
   try {
     const monthStr = getCurrentMonthJST();
