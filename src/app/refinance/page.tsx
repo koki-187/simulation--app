@@ -145,7 +145,7 @@ export default function RefinancePage() {
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshResult, setRefreshResult] = useState<{ foundCount: number; total: number } | null>(null);
 
-  const getCurrentMonthJST = (): string => {
+  const currentMonthJST = useMemo(() => {
     const now = new Date();
     const parts = new Intl.DateTimeFormat('ja-JP', {
       timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit'
@@ -153,9 +153,7 @@ export default function RefinancePage() {
     const y = parts.find(p => p.type === 'year')?.value ?? String(now.getFullYear());
     const m = parts.find(p => p.type === 'month')?.value ?? String(now.getMonth() + 1).padStart(2, '0');
     return `${y}-${m}`;
-  };
-
-  const currentMonthJST = getCurrentMonthJST();
+  }, []);
   const isAlreadyUpdatedThisMonth = rateDataMonth === currentMonthJST;
 
   const handleRefreshRates = async () => {
@@ -174,7 +172,7 @@ export default function RefinancePage() {
       // Only update rates that passed validation (non-null values)
       const validRates: Record<string, number> = {};
       for (const [k, v] of Object.entries(data.rates as Record<string, unknown>)) {
-        if (typeof v === 'number' && v > 0) validRates[k] = v;
+        if (typeof v === 'number' && v >= 0.1 && v <= 3.5) validRates[k] = v;
       }
       // Use getState() to avoid stale closure when merging rates
       const currentRates = useRefinanceStore.getState().refreshedRates;

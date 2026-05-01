@@ -96,7 +96,7 @@ async function fetchViaJinaReader(): Promise<ParsedRates> {
     return parseRatesFromText(text);
   } catch (e) {
     clearTimeout(timer);
-    console.warn('Jina Reader failed:', e);
+    console.error('[refresh-rates] Jina Reader failed:', e);
     return {};
   }
 }
@@ -121,7 +121,7 @@ async function fetchDirectFromSite(): Promise<ParsedRates> {
     return parseRatesFromText(text);
   } catch (e) {
     clearTimeout(timer);
-    console.warn('Direct fetch failed:', e);
+    console.error('[refresh-rates] Direct fetch failed:', e);
     return {};
   }
 }
@@ -166,8 +166,9 @@ export async function POST() {
       totalBanks: TOTAL_BANKS,
     });
   } catch (error) {
+    console.error('[refresh-rates] Fatal error:', error);
     return Response.json(
-      { success: false, error: String(error) },
+      { success: false, error: '金利データの取得に失敗しました' },
       { status: 500 }
     );
   }
