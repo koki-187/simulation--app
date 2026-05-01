@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout';
 import { useShallow } from 'zustand/react/shallow';
 import { useRefinanceStore } from '@/store/refinanceStore';
 import { REFINANCE_BANKS_2026, calcProcessingFee } from '@/lib/data/refinanceBanks2026';
+import { findExitFee } from '@/lib/data/currentBankExitFees';
 import {
   calcRefinance,
   estimateRegistrationFee,
@@ -308,10 +309,25 @@ export default function RefinancePage() {
                   <label className="text-xs font-medium text-neutral-700">現行銀行名</label>
                   <input
                     type="text" value={currentBank}
-                    onChange={e => set({ currentBank: e.target.value })}
+                    onChange={e => {
+                      const name = e.target.value;
+                      set({ currentBank: name });
+                      const exitFee = findExitFee(name);
+                      if (exitFee !== null) {
+                        set({ prepaymentPenalty: exitFee.fullPrepaymentFee });
+                      }
+                    }}
                     placeholder="例：楽天銀行"
                     className="input-cell text-left"
                   />
+                  {(() => {
+                    const exitFee = findExitFee(currentBank);
+                    return exitFee ? (
+                      <p className="text-[10px] text-orange-600">
+                        💡 {exitFee.bankName}の繰上返済手数料を自動入力しました（{exitFee.notes}）
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 <NumberInput label="現在の残債" value={currentBalance / 10000}
                   onChange={v => set({ currentBalance: v * 10000 })}
@@ -548,6 +564,27 @@ export default function RefinancePage() {
                               <tr key={`${r.bankId}-notes`}>
                                 <td colSpan={7} className="px-4 pb-3 bg-orange-50">
                                   <p className="text-xs text-neutral-600 mt-2">{bankData.notes}</p>
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${bankData.has5YearRule ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-neutral-100 border-neutral-200 text-neutral-400 line-through'}`}>
+                                      5年ルール{bankData.has5YearRule ? 'あり' : 'なし'}
+                                    </span>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${bankData.has125Rule ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-neutral-100 border-neutral-200 text-neutral-400 line-through'}`}>
+                                      1.25倍ルール{bankData.has125Rule ? 'あり' : 'なし'}
+                                    </span>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full border bg-purple-50 border-purple-200 text-purple-600 font-medium">
+                                      金利見直し：{bankData.rateRevision}
+                                    </span>
+                                    {bankData.prepaymentFeeFull > 0 && (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full border bg-orange-50 border-orange-200 text-orange-600 font-medium">
+                                        全額繰上：{bankData.prepaymentFeeFull.toLocaleString('ja-JP')}円
+                                      </span>
+                                    )}
+                                    {bankData.prepaymentFeeFull === 0 && (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full border bg-success-50 border-success-200 text-success-600 font-medium">
+                                        全額繰上：無料
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="flex gap-4 mt-2 text-xs text-neutral-500">
                                     <span>最低借入: {yenM(bankData.minLoanAmount)}</span>
                                     <span>審査目安: 約{bankData.applyDays}日</span>
