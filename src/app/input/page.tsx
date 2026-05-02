@@ -146,7 +146,7 @@ export default function InputPage() {
       </div>
       <div className="p-6">
         {activePattern === 'compare' ? (
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div><h2 className="text-sm font-bold text-orange-500 mb-3">Pattern A</h2><InputPanel pattern="A" /></div>
             <div><h2 className="text-sm font-bold text-orange-300 mb-3">Pattern B</h2><InputPanel pattern="B" /></div>
           </div>

@@ -49,6 +49,17 @@ export const useRefinanceStore = create<RefinanceState>()(
       ...DEFAULT,
       set: (patch) => set((s) => ({ ...s, ...patch })),
     }),
-    { name: 'terass-refinance-v1' }
+    { name: 'mas-refinance-v1' }
   )
 );
+
+// 旧ストレージキー移行（TERASS→MAS リブランド対応）
+if (typeof window !== 'undefined') {
+  try {
+    const old = localStorage.getItem('terass-refinance-v1');
+    if (old && !localStorage.getItem('mas-refinance-v1')) {
+      localStorage.setItem('mas-refinance-v1', old);
+    }
+    localStorage.removeItem('terass-refinance-v1');
+  } catch { /* ignore */ }
+}

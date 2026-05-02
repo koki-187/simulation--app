@@ -57,11 +57,59 @@ function parseCSVRow(line: string): string[] {
 }
 
 export async function POST(req: Request) {
+  const adminToken = process.env.REFRESH_API_TOKEN;
+  if (adminToken) {
+    const auth = req.headers.get('authorization') ?? '';
+    if (auth !== `Bearer ${adminToken}`) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
+  // Content-Lengthヘッダーに依存しない実際のボディサイズ制限
+  const MAX_BODY_SIZE = 1_000_000; // 1MB
+  let totalSize = 0;
+  const chunks: Uint8Array[] = [];
+
+  const reader = req.body?.getReader();
+  if (!reader) {
+    return Response.json({ success: false, error: 'リクエストボディが空です' }, { status: 400 });
+  }
+
   try {
-    const text = await req.text();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalSize += value.length;
+      if (totalSize > MAX_BODY_SIZE) {
+        await reader.cancel();
+        return Response.json(
+          { success: false, error: 'ファイルサイズが1MBを超えています' },
+          { status: 413 }
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new TextDecoder().decode(
+    chunks.reduce((acc, chunk) => {
+      const merged = new Uint8Array(acc.length + chunk.length);
+      merged.set(acc);
+      merged.set(chunk, acc.length);
+      return merged;
+    }, new Uint8Array())
+  );
+
+  try {
+    const text = body;
     // Remove BOM
     const csv = text.replace(/^﻿/, '');
     const lines = csv.split('\n').filter(l => l.trim());
+    if (lines.length > 10_000) {
+      return Response.json({ success: false, error: '行数が上限(10,000行)を超えています' }, { status: 400 });
+    }
 
     const rates: ParsedRates = {};
     let parsedCount = 0;

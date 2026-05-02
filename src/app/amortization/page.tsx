@@ -15,9 +15,7 @@ type AnnualRow = {
   cumInterest: number;
 };
 
-async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
-  const { elementToPdf } = await import('@/lib/pdf/jpdf');
-
+function buildAmortHtml(annualRows: AnnualRow[], input: SimInput, patternLabel: string): string {
   const fmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
   const today = new Date().toLocaleDateString('ja-JP');
 
@@ -32,10 +30,10 @@ async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
     </tr>
   `).join('');
 
-  const html = `
+  return `
     <div style="padding:20px;">
       <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
-        <div style="font-size:16px;font-weight:bold;">返済スケジュール</div>
+        <div style="font-size:16px;font-weight:bold;">返済スケジュール${patternLabel ? ` — ${patternLabel}` : ''}</div>
         <div style="font-size:11px;margin-top:4px;opacity:0.8;">物件: ${input.propertyName} ／ 作成日: ${today}</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:10px;">
@@ -52,14 +50,48 @@ async function exportAmortPDF(annualRows: AnnualRow[], input: SimInput) {
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
+}
+
+function buildAnnualRowsFromResult(result: { amortization: import('@/lib/calc/types').AmortRow[]; input: SimInput }): AnnualRow[] {
+  const rows = result.amortization;
+  return Array.from({ length: result.input.termYears }, (_, i) => {
+    const yr = rows.filter(r => r.year === i + 1);
+    return {
+      year: i + 1,
+      totalPayment: yr.reduce((s, r) => s + r.payment, 0),
+      totalInterest: yr.reduce((s, r) => s + r.interest, 0),
+      totalPrincipal: yr.reduce((s, r) => s + r.principal, 0),
+      endBalance: yr[yr.length - 1]?.balance ?? 0,
+      cumInterest: yr[yr.length - 1]?.cumInterest ?? 0,
+    };
+  });
+}
+
+async function exportAmortPDF(
+  resultA: { amortization: import('@/lib/calc/types').AmortRow[]; input: SimInput },
+  resultB: { amortization: import('@/lib/calc/types').AmortRow[]; input: SimInput },
+  activePattern: string,
+) {
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const today = new Date().toLocaleDateString('ja-JP');
+
+  let html: string;
+  if (activePattern === 'compare') {
+    html = buildAmortHtml(buildAnnualRowsFromResult(resultA), resultA.input, 'パターンA')
+         + buildAmortHtml(buildAnnualRowsFromResult(resultB), resultB.input, 'パターンB');
+  } else {
+    const result = activePattern === 'B' ? resultB : resultA;
+    const annual = buildAnnualRowsFromResult(result);
+    html = buildAmortHtml(annual, result.input, '');
+  }
 
   await elementToPdf({
     html,
-    filename: `TERASS_返済スケジュール_${input.propertyName}_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_返済スケジュール_${resultA.input.propertyName}_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }
@@ -73,7 +105,7 @@ export default function AmortizationPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const rows = result.amortization;
-  // Annual summary
+  // Annual summary for display
   const annualRows = Array.from({ length: result.input.termYears }, (_, i) => {
     const yr = rows.filter(r => r.year === i + 1);
     return {
@@ -94,7 +126,7 @@ export default function AmortizationPage() {
           <button
             onClick={async () => {
               setPdfLoading(true);
-              try { await exportAmortPDF(annualRows, result.input); }
+              try { await exportAmortPDF(resultA, resultB, activePattern); }
               catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
               finally { setPdfLoading(false); }
             }}

@@ -19,7 +19,9 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-4xl">⚠️</div>
           <h2 className="text-lg font-bold text-navy-500">表示中にエラーが発生しました</h2>
           <p className="text-sm text-neutral-500 text-center max-w-sm">
-            {this.state.error?.message ?? '予期しないエラーが発生しました。'}
+            {process.env.NODE_ENV === 'development'
+              ? (this.state.error?.message ?? '不明なエラー')
+              : '予期しないエラーが発生しました。ページを再読み込みしてください。'}
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}

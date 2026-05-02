@@ -59,6 +59,17 @@ export const useHomeLoanStore = create<HomeLoanState>()(
       set: (patch) => set((s) => ({ ...s, ...patch })),
       reset: () => set(() => ({ ...DEFAULT })),
     }),
-    { name: 'terass-home-loan-v1' }
+    { name: 'mas-home-loan-v1' }
   )
 );
+
+// 旧ストレージキー移行（TERASS→MAS リブランド対応）
+if (typeof window !== 'undefined') {
+  try {
+    const old = localStorage.getItem('terass-home-loan-v1');
+    if (old && !localStorage.getItem('mas-home-loan-v1')) {
+      localStorage.setItem('mas-home-loan-v1', old);
+    }
+    localStorage.removeItem('terass-home-loan-v1');
+  } catch { /* ignore */ }
+}

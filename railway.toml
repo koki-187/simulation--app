@@ -1,0 +1,14 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm run build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/"
+
+[deploy]
+startCommand = "node .next/standalone/server.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[deploy.envVars]
+NODE_ENV = "production"
+HOSTNAME = "0.0.0.0"

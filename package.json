@@ -1,5 +1,5 @@
 {
-  "name": "terass-sim",
+  "name": "mas",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,18 +8,22 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start:railway": "node .next/standalone/server.js",
+    "type-check": "tsc --noEmit",
+    "postbuild": "node -e \"const fs=require('fs');const path=require('path');function copyDir(src,dst){if(!fs.existsSync(dst))fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src)){const s=path.join(src,f);const d=path.join(dst,f);if(fs.statSync(s).isDirectory())copyDir(s,d);else fs.copyFileSync(s,d)}}try{copyDir('public','.next/standalone/public');copyDir('.next/static','.next/standalone/.next/static');console.log('Static files copied to standalone')}catch(e){console.warn('Copy skipped:',e.message)}\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
+    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
-    "xlsx": "^0.18.5",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

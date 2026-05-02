@@ -136,7 +136,7 @@ async function exportLoanComparePDF(params: PDFParams): Promise<void> {
   doc.text('金融機関比較レポート', 14, 13);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('TERASS', 14, 20);
+  doc.text('MAS', 14, 20);
   doc.text(today, 196, 20, { align: 'right' });
 
   doc.setTextColor(16, 24, 43);
@@ -236,7 +236,7 @@ async function exportLoanComparePDF(params: PDFParams): Promise<void> {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(150, 150, 150);
-  doc.text('本資料はTERASS株式会社が作成した参考情報です', 105, pageHeight - 8, { align: 'center' });
+  doc.text('本資料はMASが作成した参考情報です', 105, pageHeight - 8, { align: 'center' });
 
   doc.save(`金融機関比較レポート_${today}.pdf`);
 }

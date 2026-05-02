@@ -2,9 +2,12 @@
 import { ReactNode, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { ErrorBoundary } from '@/components/ui';
+import { BatchPrintModal } from '@/components/BatchPrintModal';
+import { InstallBanner } from '@/components/pwa/InstallBanner';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [batchPrintOpen, setBatchPrintOpen] = useState(false);
   return (
     <div className="flex min-h-screen">
       {/* Mobile overlay */}
@@ -21,7 +24,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         transition-transform duration-200 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          onClose={() => setSidebarOpen(false)}
+          onBatchPrint={() => setBatchPrintOpen(true)}
+        />
       </div>
 
       {/* Main content */}
@@ -30,19 +36,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="md:hidden flex items-center gap-3 bg-navy-500 text-white px-4 py-3 sticky top-0 z-20">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-1 rounded hover:bg-navy-600 transition-colors"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-navy-600 transition-colors"
             aria-label="メニューを開く"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-bold text-sm">TERASS 不動産シミュレーター</span>
+          <span className="font-bold text-sm">MAS - My Agent Simulation</span>
         </div>
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
       </main>
+
+      <BatchPrintModal
+        open={batchPrintOpen}
+        onClose={() => setBatchPrintOpen(false)}
+      />
+      <InstallBanner />
     </div>
   );
 }

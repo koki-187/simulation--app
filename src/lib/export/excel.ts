@@ -3,34 +3,47 @@
 import type { SimResult } from '@/lib/calc/types';
 import { pct, cagr } from '@/lib/format';
 
-type WsData = (string | number)[][];
+type RowData = (string | number)[];
 
-// Workaround: attach XLSX to the workbook object to pass it into addSheet
-type XLSXModule = typeof import('xlsx');
-type AugmentedWB = import('xlsx').WorkBook & { __XLSX__: XLSXModule };
-
-function addSheet(wb: AugmentedWB, name: string, data: WsData) {
-  const XLSX = wb.__XLSX__;
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const colW = data[0]?.map((_, ci) => ({
-    wch: Math.max(10, ...data.map(r => String(r[ci] ?? '').length + 2)),
-  }));
-  if (colW) ws['!cols'] = colW;
-  XLSX.utils.book_append_sheet(wb, ws, name);
-}
-
+/** ExcelJSを使ってブラウザからExcelファイルをダウンロード */
 export async function exportExcel(resultA: SimResult, resultB: SimResult | null) {
-  const XLSX = await import('xlsx');
+  const ExcelJS = (await import('exceljs')).default;
 
-  const wb = XLSX.utils.book_new() as AugmentedWB;
-  wb.__XLSX__ = XLSX;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'MAS - My Agent Simulation';
+  wb.created = new Date();
 
   const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
   const hasB = resultB !== null;
 
-  // ── Sheet 1: サマリー ─────────────────────────────────────────────────────────
-  const summaryData: WsData = [
-    ['TERASS 不動産投資シミュレーター — サマリー'],
+  /** シートを追加してデータを書き込む */
+  function addSheet(name: string, data: RowData[]) {
+    const ws = wb.addWorksheet(name);
+
+    // 列幅を自動計算
+    const colWidths: number[] = [];
+    for (const row of data) {
+      row.forEach((cell, ci) => {
+        const len = String(cell ?? '').length + 2;
+        colWidths[ci] = Math.max(colWidths[ci] ?? 10, len);
+      });
+    }
+    ws.columns = colWidths.map(w => ({ width: w }));
+
+    // 行を追加
+    for (const row of data) {
+      ws.addRow(row);
+    }
+
+    // ヘッダー行（1行目）をボールドに
+    const header = ws.getRow(1);
+    header.font = { bold: true };
+    header.commit();
+  }
+
+  // ── Sheet 1: サマリー ──────────────────────────────────────────────────────
+  const summaryData: RowData[] = [
+    ['MAS - My Agent Simulation — サマリー'],
     ['作成日', new Date().toLocaleDateString('ja-JP')],
     [],
     ['項目', 'パターンA', ...(hasB ? ['パターンB'] : [])],
@@ -54,62 +67,63 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
     ['DSCR (1年目)', `${resultA.ratios.dscr.toFixed(2)}x`, ...(hasB ? [`${resultB!.ratios.dscr.toFixed(2)}x`] : [])],
     ['損益分岐点賃料', resultA.ratios.breakevenRent, ...(hasB ? [resultB!.ratios.breakevenRent] : [])],
   ];
-  addSheet(wb, 'サマリー', summaryData);
+  addSheet('サマリー', summaryData);
 
-  // ── Sheet 2: 収支_A ───────────────────────────────────────────────────────────
-  const cfHeader: WsData = [
-    ['年', '家賃収入', '管理費等', '固都税', '運営CF', '年間返済', '利息', '税前CF', '減価償却', '課税所得', '所得税', '税引後CF', '累計CF', 'ローン残債'],
+  // ── Sheet 2: 収支_A ──────────────────────────────────────────────────────────
+  const cfHeader: RowData = [
+    '年', '家賃収入', '管理費等', '固都税', '運営CF', '年間返済', '利息', '税前CF',
+    '減価償却', '課税所得', '所得税', '税引後CF', '累計CF', 'ローン残債',
   ];
-  const cfRowsA: WsData = resultA.cashFlows.map(r => [
+  const cfRowsA: RowData[] = resultA.cashFlows.map(r => [
     r.year, r.rentalIncome, r.managementCosts, r.fixedAssetTax,
     r.operatingCF, r.annualLoanPayment, r.loanInterest, r.preTaxCF,
     r.depreciation, r.taxableIncome, r.incomeTax, r.afterTaxCF, r.cumulativeCF, r.loanBalance,
   ]);
-  addSheet(wb, '収支_A', [...cfHeader, ...cfRowsA]);
+  addSheet('収支_A', [cfHeader, ...cfRowsA]);
 
   if (hasB) {
-    const cfRowsB: WsData = resultB!.cashFlows.map(r => [
+    const cfRowsB: RowData[] = resultB!.cashFlows.map(r => [
       r.year, r.rentalIncome, r.managementCosts, r.fixedAssetTax,
       r.operatingCF, r.annualLoanPayment, r.loanInterest, r.preTaxCF,
       r.depreciation, r.taxableIncome, r.incomeTax, r.afterTaxCF, r.cumulativeCF, r.loanBalance,
     ]);
-    addSheet(wb, '収支_B', [...cfHeader, ...cfRowsB]);
+    addSheet('収支_B', [cfHeader, ...cfRowsB]);
   }
 
-  // ── Sheet 3: 返済表_A ─────────────────────────────────────────────────────────
-  const amoHeader: WsData = [['月', '返済額', '利息', '元金', '残高']];
-  const amoRowsA: WsData = resultA.amortization.slice(0, 420).map(r => [
+  // ── Sheet 3: 返済表_A ────────────────────────────────────────────────────────
+  const amoHeader: RowData = ['月', '返済額', '利息', '元金', '残高'];
+  const amoRowsA: RowData[] = resultA.amortization.slice(0, 420).map(r => [
     r.month, r.payment, r.interest, r.principal, r.balance,
   ]);
-  addSheet(wb, '返済表_A', [...amoHeader, ...amoRowsA]);
+  addSheet('返済表_A', [amoHeader, ...amoRowsA]);
 
   if (hasB) {
-    const amoRowsB: WsData = resultB!.amortization.slice(0, 420).map(r => [
+    const amoRowsB: RowData[] = resultB!.amortization.slice(0, 420).map(r => [
       r.month, r.payment, r.interest, r.principal, r.balance,
     ]);
-    addSheet(wb, '返済表_B', [...amoHeader, ...amoRowsB]);
+    addSheet('返済表_B', [amoHeader, ...amoRowsB]);
   }
 
-  // ── Sheet 4: 売却シナリオ ─────────────────────────────────────────────────────
-  const saleHeader: WsData = [[
+  // ── Sheet 4: 売却シナリオ ────────────────────────────────────────────────────
+  const saleHeader: RowData = [
     'シナリオ', '保有年数', '想定売却価格', 'ローン残債', '売却費用', '税引前手残り',
     '譲渡所得', '譲渡税', '税引後手残り', 'CAGR', '投資倍率',
-  ]];
-  const makeSaleRows = (res: SimResult): WsData =>
+  ];
+  const makeSaleRows = (res: SimResult): RowData[] =>
     res.saleScenarios.map(s => [
       s.label, s.holdingYears, s.salePrice, s.loanBalance, s.sellingCosts,
       s.preTaxProfit, s.taxableGain, s.capitalGainsTax, s.afterTaxProfit,
       cagr(s.cagr), `${s.investmentMultiple.toFixed(2)}x`,
     ]);
 
-  const saleData: WsData = [...saleHeader, ['── Pattern A ──'], ...makeSaleRows(resultA)];
+  const saleData: RowData[] = [saleHeader, ['── Pattern A ──'], ...makeSaleRows(resultA)];
   if (hasB) saleData.push(['── Pattern B ──'], ...makeSaleRows(resultB!));
-  addSheet(wb, '売却シナリオ', saleData);
+  addSheet('売却シナリオ', saleData);
 
-  // ── Sheet 5: 税金 ─────────────────────────────────────────────────────────────
+  // ── Sheet 5: 税金 ────────────────────────────────────────────────────────────
   const tdA = resultA.taxDetail;
   const tdB = hasB ? resultB!.taxDetail : null;
-  const taxData: WsData = [
+  const taxData: RowData[] = [
     ['所得税・譲渡税詳細', 'パターンA', ...(hasB ? ['パターンB'] : [])],
     ['── 不動産所得（1年目概算）──'],
     ['家賃収入', tdA.rentalRevenue, ...(hasB ? [tdB!.rentalRevenue] : [])],
@@ -120,7 +134,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
     ['ローン利息', tdA.loanInterest, ...(hasB ? [tdB!.loanInterest] : [])],
     ['不動産所得', tdA.realEstateIncome, ...(hasB ? [tdB!.realEstateIncome] : [])],
     ['所得税率', pct(tdA.incomeTaxRate), ...(hasB ? [pct(tdB!.incomeTaxRate)] : [])],
-    ['所得税', tdA.incomeTax, ...(hasB ? [tdB!.incomeTax] : [])],
+    ['所得税（+復興特別所得税）', tdA.incomeTax, ...(hasB ? [tdB!.incomeTax] : [])],
     ['住民税', tdA.residentTax, ...(hasB ? [tdB!.residentTax] : [])],
     ['税負担合計', tdA.totalTaxBurden, ...(hasB ? [tdB!.totalTaxBurden] : [])],
     [],
@@ -135,7 +149,17 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
     ['課税譲渡所得', tdA.taxableGain, ...(hasB ? [tdB!.taxableGain] : [])],
     ['譲渡所得税', tdA.capitalGainsTax, ...(hasB ? [tdB!.capitalGainsTax] : [])],
   ];
-  addSheet(wb, '税金', taxData);
+  addSheet('税金', taxData);
 
-  XLSX.writeFile(wb, `TERASS_投資シミュレーション_${dateStr}.xlsx`);
+  // ── ダウンロード ──────────────────────────────────────────────────────────────
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `MAS_投資シミュレーション_${dateStr}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

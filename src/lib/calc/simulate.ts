@@ -1,7 +1,7 @@
 import { SimInput, SimResult, CFRow, Ratios } from './types';
 import { calcPMT, calcAmortization, balanceAtYear, annualInterest, calcBankOptions } from './mortgage';
 import { calcDepreciation } from './depreciation';
-import { calcTotalTax, calcIncomeTaxRate, calcSaleScenarios } from './tax';
+import { calcTotalTax, calcIncomeTaxRate, calcIncomeTax, calcResidentTax, calcSaleScenarios } from './tax';
 
 export function simulate(input: SimInput): SimResult {
   const {
@@ -80,6 +80,22 @@ export function simulate(input: SimInput): SimResult {
   // ── Tax Detail ───────────────────────────────────────────────────────────────
   const y1 = cashFlows[0];
   const insuranceEst = Math.floor(propertyPrice * 0.001);
+
+  // 損益通算計算（給与所得がある場合のみ有効）
+  // 注: annualIncomeTaxBase は円単位（input UI では 円/年）。salaryIncome は表示用に万円換算。
+  const salaryIncomeYen = annualIncomeTaxBase; // 円単位
+  const salaryIncome = Math.floor(salaryIncomeYen / 10000); // 万円単位（表示用）
+  const hasLoss = y1.taxableIncome < 0;
+  const deductibleLoss = Math.min(0, y1.taxableIncome);
+  const combinedTaxableIncome = Math.max(0, salaryIncomeYen + y1.taxableIncome);
+  const taxOnSalaryAlone = salaryIncomeYen > 0
+    ? calcIncomeTax(salaryIncomeYen) + calcResidentTax(salaryIncomeYen)
+    : 0;
+  const taxOnCombined = hasLoss && salaryIncomeYen > 0
+    ? calcIncomeTax(combinedTaxableIncome) + calcResidentTax(combinedTaxableIncome)
+    : taxOnSalaryAlone;
+  const estimatedTaxRefund = Math.max(0, taxOnSalaryAlone - taxOnCombined);
+
   const taxDetail = {
     rentalRevenue: y1.rentalIncome,
     managementExp: y1.managementCosts,
@@ -91,32 +107,42 @@ export function simulate(input: SimInput): SimResult {
     totalExpenses: y1.managementCosts + y1.fixedAssetTax + y1.depreciation + y1.loanInterest + insuranceEst,
     realEstateIncome: y1.taxableIncome,
     incomeTaxRate: calcIncomeTaxRate(y1.taxableIncome),
-    incomeTax: Math.floor(y1.incomeTax * 0.75),
-    residentTax: Math.floor(y1.incomeTax * 0.25),
+    incomeTax: calcIncomeTax(y1.taxableIncome),
+    residentTax: calcResidentTax(y1.taxableIncome),
     totalTaxBurden: y1.incomeTax,
     holdingYears,
-    isLongTerm: holdingYears >= 5,
-    taxRate: holdingYears >= 5 ? 0.20315 : 0.3963,
+    isLongTerm: holdingYears > 5,
+    taxRate: holdingYears > 5 ? 0.20315 : 0.3963,
     salePrice: saleScenarios[1].salePrice,
     acquisitionCost: propertyPrice,
     accumulatedDep: cumDepAtSale,
     sellingCosts: saleScenarios[1].sellingCosts,
     taxableGain: saleScenarios[1].taxableGain,
     capitalGainsTax: saleScenarios[1].capitalGainsTax,
+    salaryIncome,
+    hasLoss,
+    deductibleLoss,
+    combinedTaxableIncome,
+    taxOnSalaryAlone,
+    taxOnCombined,
+    estimatedTaxRefund,
   };
 
   // ── Ratios ─────────────────────────────────────────────────────────────────
   const grossYield = effectiveMonthlyRent > 0 ? (monthlyRent * 12) / propertyPrice : 0;
-  const netYield = ((effectiveMonthlyRent * 12) - (managementFee + repairFund + otherExpenses) * 12 - fixedAssetTax) / propertyPrice;
+  const netYield = propertyPrice > 0
+    ? ((effectiveMonthlyRent * 12) - (managementFee + repairFund + otherExpenses) * 12 - fixedAssetTax) / propertyPrice
+    : 0;
   const monthlyLoanPayment = monthlyPayment;
   const breakevenRent = monthlyLoanPayment + managementFee + repairFund + otherExpenses + fixedAssetTax / 12;
-  const dscr = y1.operatingCF / (monthlyPayment * 12);
+  const annualDebtService = monthlyPayment * 12;
+  const dscr = annualDebtService > 0 ? y1.operatingCF / annualDebtService : 0;
 
   const totalMonthlyDebt = monthlyPayment; // for ratios (could add multiple loans)
   const ratios: Ratios = {
     grossYield,
     netYield,
-    repaymentRatio: annualIncomeTaxBase > 0 ? (totalMonthlyDebt * 12) / annualIncomeTaxBase : 0,
+    repaymentRatio: effectiveMonthlyRent > 0 ? monthlyPayment / effectiveMonthlyRent : 0,
     incomeMultipleTax: annualIncomeTaxBase > 0 ? loanAmount / annualIncomeTaxBase : 0,
     incomeMultipleDeclared: annualIncomeDeclared > 0 ? loanAmount / annualIncomeDeclared : 0,
     repaymentRatioTax: annualIncomeTaxBase > 0 ? (totalMonthlyDebt * 12) / annualIncomeTaxBase : 0,

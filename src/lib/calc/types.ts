@@ -122,6 +122,15 @@ export interface TaxDetail {
   sellingCosts: number;
   taxableGain: number;
   capitalGainsTax: number;
+
+  // 損益通算関連フィールド
+  salaryIncome: number;           // 給与所得（入力値、万円単位）
+  hasLoss: boolean;               // 不動産所得が赤字かどうか
+  deductibleLoss: number;         // 損益通算可能な損失額（0以下の数値）
+  combinedTaxableIncome: number;  // 損益通算後の課税所得
+  taxOnSalaryAlone: number;       // 給与のみの所得税+住民税
+  taxOnCombined: number;          // 損益通算後の所得税+住民税
+  estimatedTaxRefund: number;     // 節税見込額（参考値）
 }
 
 export interface Ratios {

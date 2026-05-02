@@ -38,9 +38,16 @@ const NAV: NavItem[] = [
   { type: 'link', href: '/banks',        label: 'ローン比較',          icon: '🏦' },
   { type: 'link', href: '/loan-compare', label: '金融機関比較',        icon: '⚖️' },
   { type: 'link', href: '/funding-plan', label: '資金計画書',          icon: '📋' },
+  { type: 'link', href: '/install',     label: 'アプリインストール',   icon: '📲' },
 ];
 
-export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void }) {
+export const Sidebar = memo(function Sidebar({
+  onClose,
+  onBatchPrint,
+}: {
+  onClose?: () => void;
+  onBatchPrint?: () => void;
+}) {
   const pathname = usePathname();
   return (
     <aside className="w-56 h-screen bg-navy-500 flex flex-col shrink-0 overflow-hidden">
@@ -49,14 +56,14 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/terass-logo.png"
-            alt="TERASS"
+            src="/mas-logo.png"
+            alt="MAS"
             className="h-7 w-auto object-contain"
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
           <div>
-            <div className="text-white font-bold text-xl tracking-widest leading-tight">TERASS</div>
-            <div className="text-navy-100 text-xs mt-0.5">不動産シミュレーター</div>
+            <div className="text-white font-bold text-xl tracking-widest leading-tight">MAS</div>
+            <div className="text-navy-100 text-xs mt-0.5">My Agent Simulation</div>
           </div>
         </div>
       </div>
@@ -96,6 +103,16 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
         })}
       </nav>
 
+      {/* 一括PDF出力ボタン */}
+      <div className="px-3 py-3 border-t border-navy-600">
+        <button
+          onClick={() => onBatchPrint?.()}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
+        >
+          <span>📄</span>
+          <span>一括PDF出力</span>
+        </button>
+      </div>
     </aside>
   );
 });

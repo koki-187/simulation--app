@@ -18,7 +18,7 @@ export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('TERASS Real Estate Investment Simulation Report', 14, 10);
+  doc.text('MAS Real Estate Investment Simulation Report', 14, 10);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   const dateStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -151,9 +151,9 @@ export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.text('TERASS 不動産投資シミュレーター — 本資料は試算値であり、投資助言ではありません。', 14, 293);
+    doc.text('MAS - My Agent Simulation — 本資料は試算値であり、投資助言ではありません。', 14, 293);
     doc.text(`Page ${p} / ${totalPages}`, pageW - 25, 293);
   }
 
-  doc.save(`TERASS_投資シミュレーション_${dateStr.replace(/\//g, '')}.pdf`);
+  doc.save(`MAS_投資シミュレーション_${dateStr.replace(/\//g, '')}.pdf`);
 }

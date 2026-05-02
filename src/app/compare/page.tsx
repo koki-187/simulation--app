@@ -5,6 +5,7 @@ import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, cagr, mult } from '@/lib/format';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer, Tooltip } from 'recharts';
+import { radarChartSvg } from '@/lib/pdf/chartSvg';
 
 async function exportComparePDF(
   rows: { label: string; fmtA: string; fmtB: string; betterA: boolean }[],
@@ -12,6 +13,7 @@ async function exportComparePDF(
   inputB: { propertyName: string },
   aWins: number,
   bWins: number,
+  radarData: { subject: string; A: number; B: number }[],
 ) {
   const { elementToPdf } = await import('@/lib/pdf/jpdf');
 
@@ -54,6 +56,7 @@ async function exportComparePDF(
       <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:10px;color:#92400E;">
         総合評価: パターン${winnerLabel}が${Math.max(aWins, bWins)}/${rows.length}指標でリード
       </div>
+      ${radarChartSvg(radarData, inputA.propertyName, inputB.propertyName)}
       <table style="width:100%;border-collapse:collapse;font-size:10px;">
         <thead>
           <tr style="background:#1C2B4A;color:white;">
@@ -66,14 +69,14 @@ async function exportComparePDF(
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
 
   await elementToPdf({
     html,
-    filename: `TERASS_AB比較_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_AB比較_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }
@@ -133,7 +136,7 @@ export default function ComparePage() {
         <button
           onClick={async () => {
             setPdfLoading(true);
-            try { await exportComparePDF(rows, inputA, inputB, aWins, bWins); }
+            try { await exportComparePDF(rows, inputA, inputB, aWins, bWins, radarData); }
             catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
             finally { setPdfLoading(false); }
           }}

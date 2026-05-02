@@ -39,6 +39,33 @@ export const useSimStore = create<SimStore>()(
         resultB: simulate(s.inputB),
       })),
     }),
-    { name: 'terass-sim-store' }
+    {
+      name: 'mas-sim-store',
+      partialize: (state) => ({
+        inputA: state.inputA,
+        inputB: state.inputB,
+        activePattern: state.activePattern,
+      }),
+    }
   )
 );
+
+// 旧ストレージキー移行（TERASS→MAS リブランド対応）
+if (typeof window !== 'undefined') {
+  try {
+    const old = localStorage.getItem('terass-sim-store');
+    if (old && !localStorage.getItem('mas-sim-store')) {
+      const parsed = JSON.parse(old);
+      const migrated = {
+        state: {
+          inputA: parsed?.state?.inputA,
+          inputB: parsed?.state?.inputB,
+          activePattern: parsed?.state?.activePattern ?? 'A',
+        },
+        version: 0,
+      };
+      localStorage.setItem('mas-sim-store', JSON.stringify(migrated));
+    }
+    localStorage.removeItem('terass-sim-store');
+  } catch { /* ignore */ }
+}

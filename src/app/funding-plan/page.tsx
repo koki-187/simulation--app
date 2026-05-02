@@ -91,7 +91,7 @@ async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
   doc.text('資金計画書', MARGIN, 14);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`TERASS株式会社  作成日: ${data.createdDate}`, W - MARGIN, 14, { align: 'right' });
+  doc.text(`MAS  作成日: ${data.createdDate}`, W - MARGIN, 14, { align: 'right' });
 
   // ── Property name subtitle ────────────────────────────────────────────
   doc.setFillColor(LIGHT);
@@ -191,7 +191,7 @@ async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
     ['年収（源泉）', fmtMan(data.annualIncome)],
     ['勤務先', data.employer || '―'],
     ['勤続年数', `${data.yearsEmployed}年`],
-    ['担当エージェント', data.agentName || 'TERASS'],
+    ['担当エージェント', data.agentName || 'MAS'],
   ]);
 
   // ── Footer ────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.text(
-    '本資料はTERASS株式会社が作成した参考情報です。実際の融資条件は金融機関にご確認ください。',
+    '本資料はMASが作成した参考情報です。実際の融資条件は金融機関にご確認ください。',
     W / 2,
     footerY + 5,
     { align: 'center' }
@@ -254,7 +254,7 @@ export default function FundingPlanPage() {
   const [annualIncome, setAnnualIncome] = useState<number>(800);
   const [employer, setEmployer] = useState('');
   const [yearsEmployed, setYearsEmployed] = useState<number>(5);
-  const [agentName, setAgentName] = useState('TERASS');
+  const [agentName, setAgentName] = useState('MAS');
   const [createdDate, setCreatedDate] = useState('2026-04-26');
 
   // ── Derived calculations ───────────────────────────────────────────────
@@ -722,7 +722,7 @@ export default function FundingPlanPage() {
                 <div className="bg-navy-500 text-white px-5 py-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xl font-bold tracking-wider">TERASS</p>
+                      <p className="text-xl font-bold tracking-wider">MAS</p>
                       <p className="text-xs text-navy-100 mt-0.5">不動産投資 資金計画書</p>
                     </div>
                     <div className="text-right text-xs text-navy-100">
@@ -874,7 +874,7 @@ export default function FundingPlanPage() {
 
               {/* Disclaimer */}
               <p className="text-xs text-neutral-400 text-center leading-relaxed">
-                本資料はTERASS株式会社が作成した参考情報です。
+                本資料はMASが作成した参考情報です。
                 <br />
                 実際の融資条件は金融機関にご確認ください。
               </p>

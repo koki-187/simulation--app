@@ -1,6 +1,6 @@
 import { TaxDetail, SaleScenario } from './types';
 
-/** Progressive income tax rates (2024, combined 所得税+復興特別所得税+住民税) */
+/** Progressive income tax rates (2024, 所得税+復興特別所得税（住民税はcalcResidentTaxで別途加算）) */
 export const TAX_BRACKETS = [
   { limit: 1_950_000,   rate: 0.05,  deduction: 0 },
   { limit: 3_300_000,   rate: 0.10,  deduction: 97_500 },
@@ -20,7 +20,7 @@ export function calcIncomeTaxRate(income: number): number {
 export function calcIncomeTax(income: number): number {
   if (income <= 0) return 0;
   const bracket = TAX_BRACKETS.find(b => income <= b.limit)!;
-  return Math.floor(income * bracket.rate - bracket.deduction);
+  return Math.floor((income * bracket.rate - bracket.deduction) * 1.021);
 }
 
 /** Resident tax: flat 10% */
@@ -46,7 +46,7 @@ export function calcCapitalGainsTax(
   sellingCosts: number,
   holdingYears: number
 ): { taxableGain: number; taxRate: number; tax: number; isLongTerm: boolean } {
-  const isLongTerm = holdingYears >= 5;
+  const isLongTerm = holdingYears > 5;
   const taxRate = isLongTerm ? 0.20315 : 0.3963;
   const adjustedAcq = acquisitionCost - accumulatedDep; // 税務上取得費
   const taxableGain = Math.max(0, salePrice - adjustedAcq - sellingCosts);
@@ -64,7 +64,7 @@ export function calcSaleScenarios(
   cumulativeCF: number,
   initialInvestment: number,
 ): SaleScenario[] {
-  const baseSale = Math.floor(propertyPrice * Math.pow(1 + growthRate, holdingYears));
+  const baseSale = Math.max(0, Math.floor(propertyPrice * Math.pow(1 + growthRate, holdingYears)));
   const scenarios = [
     { label: '悲観 (−10%)', multiplier: 0.9 },
     { label: '標準',         multiplier: 1.0 },

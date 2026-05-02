@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+
 interface NumInputProps {
   label: string;
   value: number;
@@ -21,10 +23,26 @@ const FMT: Record<string, (v: number) => string> = {
 
 export function NumInput({ label, value, onChange, unit, note, fmt = 'number', min, max, step = 1, readOnly }: NumInputProps) {
   const displayValue = fmt === 'percent' ? value * 100 : value;
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = parseFloat(e.target.value.replace(/,/g, '')) || 0;
-    onChange(fmt === 'percent' ? raw / 100 : raw);
+  const [localValue, setLocalValue] = useState<string>('');
+  const [focused, setFocused] = useState(false);
+
+  const inputMode = step < 1 ? 'decimal' : 'numeric';
+
+  const handleFocus = () => {
+    setLocalValue(String(displayValue));
+    setFocused(true);
   };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    const raw = parseFloat(localValue.replace(/,/g, '')) || 0;
+    onChange(fmt === 'percent' ? raw / 100 : raw);
+    setFocused(false);
+  };
+
   return (
     <div className="flex items-center gap-2 py-1.5 border-b border-neutral-100 last:border-0">
       <span className="label-cell flex-1 min-w-0 truncate">{label}</span>
@@ -36,8 +54,11 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
         ) : (
           <input
             type="number"
-            value={displayValue}
+            inputMode={inputMode}
+            value={focused ? localValue : displayValue}
+            onFocus={handleFocus}
             onChange={handleChange}
+            onBlur={handleBlur}
             min={min}
             max={max}
             step={step}

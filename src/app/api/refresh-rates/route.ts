@@ -1,5 +1,33 @@
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30; // Vercel Pro: 30s timeout
+export const maxDuration = 30; // Railway: max execution time (seconds)
+
+// ── Rate Limiting ──────────────────────────────────────────────────────────
+// in-memory rate limiter（サーバー再起動でリセット）
+// 無料枠の単一インスタンス環境を想定
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 5;           // 1時間あたり最大5回
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1時間（ms）
+
+function checkRateLimit(key: string): { allowed: boolean; remaining: number; retryAfter: number } {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, retryAfter: 0 };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfter: Math.ceil((entry.resetAt - now) / 1000),
+    };
+  }
+
+  entry.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, retryAfter: 0 };
+}
 
 interface ParsedRates {
   [bankId: string]: number;
@@ -150,7 +178,43 @@ export async function GET() {
   });
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const adminToken = process.env.REFRESH_API_TOKEN;
+  if (!adminToken) {
+    // トークン未設定時は常に拒否（fail-closed）
+    return Response.json(
+      { success: false, error: 'REFRESH_API_TOKEN が設定されていません。Railway の環境変数に設定してください。' },
+      { status: 503 }
+    );
+  }
+  const auth = req.headers.get('authorization') ?? '';
+  if (auth !== `Bearer ${adminToken}`) {
+    return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // レート制限チェック（IPアドレスベース、なければglobalキー）
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    ?? req.headers.get('x-real-ip')
+    ?? 'global';
+  const rateLimit = checkRateLimit(clientIp);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      {
+        success: false,
+        error: `レート制限: 1時間に${RATE_LIMIT_MAX}回まで。${rateLimit.retryAfter}秒後に再試行してください。`,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfter),
+          'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(Math.floor((Date.now() + rateLimit.retryAfter * 1000) / 1000)),
+        },
+      }
+    );
+  }
+
   try {
     const monthStr = getCurrentMonthJST();
 
@@ -168,14 +232,22 @@ export async function POST() {
 
     const foundCount = Object.keys(rates).length;
 
-    return Response.json({
-      success: true,
-      rates,
-      month: monthStr,
-      updatedAt: new Date().toISOString(),
-      foundCount,
-      totalBanks: TOTAL_BANKS,
-    });
+    return Response.json(
+      {
+        success: true,
+        rates,
+        month: monthStr,
+        updatedAt: new Date().toISOString(),
+        foundCount,
+        totalBanks: TOTAL_BANKS,
+      },
+      {
+        headers: {
+          'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      }
+    );
   } catch (error) {
     console.error('[refresh-rates] Fatal error:', error);
     return Response.json(

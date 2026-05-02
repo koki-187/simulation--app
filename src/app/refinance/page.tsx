@@ -70,14 +70,14 @@ async function exportRefinancePDF(
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
 
   await elementToPdf({
     html,
-    filename: `TERASS_借り換え比較_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_借り換え比較_${today.replace(/\//g, '')}.pdf`,
     orientation: 'landscape',
   });
 }

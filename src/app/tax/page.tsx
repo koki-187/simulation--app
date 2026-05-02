@@ -6,15 +6,16 @@ import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen, pct } from '@/lib/format';
 
-async function exportTaxPDF(t: ReturnType<typeof useSimStore.getState>['resultA']['taxDetail']) {
-  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+type TaxDetail = ReturnType<typeof useSimStore.getState>['resultA']['taxDetail'];
+
+function buildTaxHtml(t: TaxDetail, patternLabel: string): string {
   const fmt = (n: number) => '¥' + Math.round(n).toLocaleString('ja-JP');
   const today = new Date().toLocaleDateString('ja-JP');
 
-  const html = `
+  return `
     <div style="padding:20px;font-family:sans-serif;">
       <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
-        <div style="font-size:16px;font-weight:bold;">税金詳細レポート</div>
+        <div style="font-size:16px;font-weight:bold;">税金詳細レポート${patternLabel ? ` — ${patternLabel}` : ''}</div>
         <div style="font-size:11px;margin-top:4px;opacity:0.8;">作成日: ${today}</div>
       </div>
 
@@ -69,14 +70,32 @@ async function exportTaxPDF(t: ReturnType<typeof useSimStore.getState>['resultA'
       </table>
 
       <div style="margin-top:16px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS株式会社
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
+}
+
+async function exportTaxPDF(
+  resultA: { taxDetail: TaxDetail },
+  resultB: { taxDetail: TaxDetail },
+  activePattern: string,
+) {
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const today = new Date().toLocaleDateString('ja-JP');
+
+  let html: string;
+  if (activePattern === 'compare') {
+    html = buildTaxHtml(resultA.taxDetail, 'パターンA')
+         + buildTaxHtml(resultB.taxDetail, 'パターンB');
+  } else {
+    const t = activePattern === 'B' ? resultB.taxDetail : resultA.taxDetail;
+    html = buildTaxHtml(t, '');
+  }
 
   await elementToPdf({
     html,
-    filename: `TERASS_税金詳細_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_税金詳細_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }
@@ -88,6 +107,7 @@ export default function TaxPage() {
   const result = activePattern === 'B' ? resultB : resultA;
   const t = result.taxDetail;
   const [pdfLoading, setPdfLoading] = useState(false);
+  // PDF button uses resultA, resultB, activePattern for compare support
 
   const expenseRows = [
     ['管理費・修繕積立金', yen(t.managementExp)],
@@ -116,7 +136,7 @@ export default function TaxPage() {
           <button
             onClick={async () => {
               setPdfLoading(true);
-              try { await exportTaxPDF(t); }
+              try { await exportTaxPDF(resultA, resultB, activePattern); }
               catch(e) { console.error(e); alert('PDF出力でエラーが発生しました。'); }
               finally { setPdfLoading(false); }
             }}
@@ -151,6 +171,45 @@ export default function TaxPage() {
               <div className="flex justify-between mt-1"><span>住民税（10%）</span><span className="font-bold text-danger-500">{yen(t.residentTax)}</span></div>
               <div className="flex justify-between mt-2 border-t border-orange-200 pt-2 font-bold"><span>合計税負担</span><span className="text-danger-500">{yen(t.totalTaxBurden)}</span></div>
             </div>
+
+            {t.hasLoss && t.salaryIncome > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-5 mt-4">
+                <h3 className="font-bold text-green-800 text-sm mb-3 flex items-center gap-2">
+                  <span>💡</span> 損益通算による節税効果（参考）
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">給与所得（入力値）</span>
+                    <span className="font-semibold">{t.salaryIncome.toLocaleString()} 万円</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">不動産所得（損失）</span>
+                    <span className="font-semibold text-red-600">{(t.deductibleLoss / 10000).toFixed(1)} 万円</span>
+                  </div>
+                  <div className="flex justify-between border-t border-green-200 pt-2">
+                    <span className="text-gray-600">損益通算後の課税所得</span>
+                    <span className="font-semibold">{(t.combinedTaxableIncome / 10000).toFixed(1)} 万円</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">給与のみの税額（所得税+住民税）</span>
+                    <span>{t.taxOnSalaryAlone.toLocaleString()} 円</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">損益通算後の税額</span>
+                    <span>{t.taxOnCombined.toLocaleString()} 円</span>
+                  </div>
+                  <div className="flex justify-between bg-green-100 rounded-lg px-3 py-2 mt-2">
+                    <span className="font-bold text-green-800">節税見込額（参考）</span>
+                    <span className="font-bold text-green-700 text-base">
+                      約 {(t.estimatedTaxRefund / 10000).toFixed(1)} 万円
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  ⚠️ 土地取得資金にかかる借入金利子は損益通算の対象外（租税特別措置法第41条の4）。実際の節税額は税理士にご確認ください。
+                </p>
+              </div>
+            )}
           </Section>
 
           <Section title="譲渡所得税の計算">
@@ -177,6 +236,13 @@ export default function TaxPage() {
               </div>
               <div className="flex justify-between"><span>税率</span><span className="font-bold text-orange-600">{pct(t.taxRate)}</span></div>
               <div className="flex justify-between mt-2 font-bold"><span>譲渡所得税概算</span><span className="text-danger-500">{yen(t.capitalGainsTax)}</span></div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mt-3 text-xs text-amber-800">
+              <span className="font-bold">⚠️ 長期/短期判定の注意：</span>
+              譲渡所得の長期/短期判定は、<span className="font-bold">譲渡した年の1月1日時点</span>での所有期間が5年超かどうかで決まります。
+              例えば2020年4月取得・2026年3月売却の場合、2026年1月1日時点では5年9ヶ月ですが、
+              2025年12月31日時点では5年8ヶ月のため長期判定となります。
+              <span className="font-bold">安全のため6年以上保有してから売却することを推奨します。</span>
             </div>
           </Section>
         </div>

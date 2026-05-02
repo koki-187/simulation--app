@@ -15,8 +15,14 @@ export function depRate(years: number): number {
 
 /** Annual depreciation (straight-line, floor) */
 export function annualDep(cost: number, years: number, year: number): number {
+  if (years <= 0 || cost <= 0 || year <= 0) return 0;  // ゼロ除算・不正値ガード
   if (year > years) return 0;
-  return Math.floor(cost / years);
+  const annual = Math.floor(cost / years);
+  if (year === years) {
+    const remaining = cost - annual * (years - 1);
+    return Math.max(0, remaining - 1); // 1円（備忘価額）を残す
+  }
+  return annual;
 }
 
 /** Full depreciation schedule for structure + equipment */
@@ -27,6 +33,7 @@ export function calcDepreciation(
   equipmentYears: number,
   holdingYears: number
 ): DepRow[] {
+  if (holdingYears <= 0) return [];  // 保有年数ゼロ・負値ガード
   const rows: DepRow[] = [];
   let cumDep = 0;
 

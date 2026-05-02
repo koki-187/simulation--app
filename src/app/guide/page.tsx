@@ -394,7 +394,7 @@ function FundingPlanMockup() {
       {/* Simulated A4 page */}
       <rect x="228" y="68" width="236" height="216" rx="3" fill="white" stroke="#D1D5DB" strokeWidth="1" />
       <rect x="228" y="68" width="236" height="26" fill="#1C2B4A" />
-      <text x="346" y="86" fill="white" fontSize="9" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">TERASS 資金計画書</text>
+      <text x="346" y="86" fill="white" fontSize="9" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">MAS 資金計画書</text>
       {/* Divider lines */}
       <line x1="236" y1="102" x2="456" y2="102" stroke="#E5E7EB" strokeWidth="0.5" />
       <text x="236" y="116" fill="#6B7280" fontSize="7" fontFamily="sans-serif">物件名</text>
@@ -418,7 +418,7 @@ function FundingPlanMockup() {
       <rect x="316" y="182" width="16" height="48" rx="1" fill="#22C55E" opacity="0.6" />
       <rect x="340" y="174" width="16" height="56" rx="1" fill="#22C55E" opacity="0.7" />
       <text x="236" y="256" fill="#9CA3AF" fontSize="6" fontFamily="sans-serif">※ 本書は試算であり、保証するものではありません</text>
-      <text x="236" y="266" fill="#9CA3AF" fontSize="6" fontFamily="sans-serif">TERASS 不動産シミュレーター</text>
+      <text x="236" y="266" fill="#9CA3AF" fontSize="6" fontFamily="sans-serif">MAS - My Agent Simulation</text>
     </svg>
   );
 }

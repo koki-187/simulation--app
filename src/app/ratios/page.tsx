@@ -101,13 +101,17 @@ export default function RatiosPage() {
   const isCompare = activePattern === 'compare';
 
   const handlePdfExport = async () => {
-    const patternLabel = isCompare ? 'A・B比較' : activePattern;
-    const htmlA = buildPdfHtml('A', resultA.ratios, dcfA);
-    const htmlB = isCompare ? buildPdfHtml('B', resultB.ratios, dcfB) : '';
-    await elementToPdf({
-      html: htmlA + htmlB,
-      filename: `ratios_dcf_${Date.now()}.pdf`,
-    });
+    try {
+      const htmlA = buildPdfHtml('A', resultA.ratios, dcfA);
+      const htmlB = isCompare ? buildPdfHtml('B', resultB.ratios, dcfB) : '';
+      await elementToPdf({
+        html: htmlA + htmlB,
+        filename: `MAS_DCF_${resultA.input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`,
+      });
+    } catch (e) {
+      console.error('PDF出力エラー:', e);
+      alert('PDF出力でエラーが発生しました。');
+    }
   };
 
   const DCFTable = ({ d, label }: { d: ReturnType<typeof buildDCF>; label?: string }) => (

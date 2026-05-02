@@ -145,7 +145,7 @@ async function exportSalePDF(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('TERASS Sale Simulation Report — All Holding Periods', 14, 8);
+  doc.text('MAS Sale Simulation Report — All Holding Periods', 14, 8);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   const dateStr = new Date().toLocaleDateString('ja-JP');
@@ -240,12 +240,12 @@ async function exportSalePDF(
     use5pctRule
       ? 'Acquisition cost: 5% rule applied (for cases where original purchase cost is unknown)'
       : 'Acquisition cost: Actual purchase price minus accumulated depreciation',
-    'TERASS 売却シミュレーター — 本資料は試算値です。税務・法律事項は専門家にご相談ください。',
+    'MAS 売却シミュレーター — 本資料は試算値です。税務・法律事項は専門家にご相談ください。',
   ];
   const noteY = doc.internal.pageSize.getHeight() - 14;
   notes.forEach((n, i) => doc.text(n, 14, noteY + i * 4));
 
-  doc.save(`TERASS_売却シミュレーション_${dateStr.replace(/\//g, '')}.pdf`);
+  doc.save(`MAS_売却シミュレーション_${dateStr.replace(/\//g, '')}.pdf`);
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────
@@ -435,6 +435,10 @@ export default function SalePage() {
           <div>• 取得費：{use5pctRule ? '売却価格×5%（概算取得費）' : '購入価格 − 累計減価償却（実額）'}</div>
           <div>• CAGR ＝（税引後手残り＋累計CF＋初期投資）^(1/n) / 初期投資 − 1</div>
           <div>• ★マーク行 ＝ 入力フォームで設定した保有年数</div>
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
+            ⚠️ <span className="font-bold">長期/短期判定は譲渡年の1月1日時点基準。</span>
+            確実に長期（税率20.315%）を適用するには<span className="font-bold">6年以上</span>の保有を推奨します。
+          </p>
         </div>
       </div>
     </AppShell>
