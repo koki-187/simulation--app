@@ -98,8 +98,8 @@ export function simulate(input: SimInput): SimResult {
 
   const taxDetail = {
     rentalRevenue: y1.rentalIncome,
-    managementExp: y1.managementCosts,
-    repairExp: 0,
+    managementExp: (managementFee + otherExpenses) * 12,   // 管理費＋その他（修繕除く）
+    repairExp: repairFund * 12,                             // 修繕積立金（修正: 0→実値）
     insuranceEst,
     fixedAssetTax: y1.fixedAssetTax,
     depreciation: y1.depreciation,

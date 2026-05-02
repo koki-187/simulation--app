@@ -137,7 +137,11 @@ export function calcRefinanceScenario(
   const adjustedNewRate = baseResult.newRate + scenarioDelta;
   const months = input.remainingYears * 12;
   const r = adjustedNewRate / 100 / 12;
-  const newMonthly = (input.currentBalance * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  // 除算ゼロ防御: r=0（金利0%）の場合は元本均等返済で計算
+  const powered = Math.pow(1 + r, months);
+  const newMonthly = (r <= 0 || !isFinite(powered) || powered === 1)
+    ? (months > 0 ? input.currentBalance / months : 0)
+    : (input.currentBalance * r * powered) / (powered - 1);
   const monthlySavings = baseResult.currentMonthly - newMonthly;
   const totalSavingsAll = monthlySavings * months - baseResult.totalCost;
   const breakEvenMonths = monthlySavings > 0 ? Math.ceil(baseResult.totalCost / monthlySavings) : Infinity;

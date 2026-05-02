@@ -613,8 +613,16 @@ export default function RefinancePage() {
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">最短損益分岐</p>
-                <p className="text-lg font-bold text-orange-500">{bestResult ? `${bestResult.breakEvenMonths}ヶ月` : '—'}</p>
-                <p className="text-xs text-neutral-400">{bestResult ? `約${(bestResult.breakEvenMonths / 12).toFixed(1)}年` : ''}</p>
+                <p className="text-lg font-bold text-orange-500">
+                  {bestResult
+                    ? bestResult.breakEvenMonths === Infinity ? '—' : `${bestResult.breakEvenMonths}ヶ月`
+                    : '—'}
+                </p>
+                <p className="text-xs text-neutral-400">
+                  {bestResult && bestResult.breakEvenMonths !== Infinity
+                    ? `約${(bestResult.breakEvenMonths / 12).toFixed(1)}年`
+                    : ''}
+                </p>
               </div>
             </div>
 
