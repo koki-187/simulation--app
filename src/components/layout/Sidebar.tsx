@@ -90,10 +90,10 @@ export const Sidebar = memo(function Sidebar({
               href={item.href}
               onClick={onClose}
               className={clsx(
-                'flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                'flex items-center gap-3 px-4 py-2 text-sm transition-colors border-l-2',
                 pathname === item.href
-                  ? 'bg-orange-500 text-white font-semibold'
-                  : 'text-navy-100 hover:bg-navy-600 hover:text-white'
+                  ? 'bg-orange-500 text-white font-semibold border-orange-300'
+                  : 'text-navy-100 hover:bg-navy-600 hover:text-white border-transparent'
               )}
             >
               <span className="text-base">{item.icon}</span>

@@ -47,6 +47,13 @@
   --shadow-modal: 0 20px 60px rgba(0,0,0,0.2);
 }
 
+/* ── スムーズスクロール & フォントサイズ最低保証 ────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  /* iOSで16px未満のinputがあると自動ズームされるのを防ぐため最低16px */
+  font-size: 16px;
+}
+
 /* ── iOS Safe Area対応 ─────────────────────────────────────────────────────── */
 body {
   padding-top: env(safe-area-inset-top);

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface NumInputProps {
   label: string;
@@ -25,10 +25,13 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
   const displayValue = fmt === 'percent' ? value * 100 : value;
   const [localValue, setLocalValue] = useState<string>('');
   const [focused, setFocused] = useState(false);
+  // 空欄ブラー時に前の有効値へ戻すためのRef
+  const prevValueRef = useRef<number>(value);
 
   const inputMode = step < 1 ? 'decimal' : 'numeric';
 
   const handleFocus = () => {
+    prevValueRef.current = value;
     setLocalValue(String(displayValue));
     setFocused(true);
   };
@@ -38,7 +41,16 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
   };
 
   const handleBlur = () => {
-    const raw = parseFloat(localValue.replace(/,/g, '')) || 0;
+    const trimmed = localValue.replace(/,/g, '').trim();
+    // 空欄 or 無効値 → 前の値を復元して onChange は呼ばない
+    if (trimmed === '' || isNaN(Number(trimmed))) {
+      onChange(prevValueRef.current);
+      setFocused(false);
+      return;
+    }
+    let raw = parseFloat(trimmed);
+    if (min !== undefined) raw = Math.max(min, raw);
+    if (max !== undefined) raw = Math.min(max, raw);
     onChange(fmt === 'percent' ? raw / 100 : raw);
     setFocused(false);
   };
