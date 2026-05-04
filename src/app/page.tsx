@@ -113,12 +113,12 @@ export default function Dashboard() {
             {inputA.propertyName} — {yen(inputA.propertyPrice)}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <StatBox label="月々返済額" value={yen(resultA.monthlyPayment)} unit="/月" />
-            <StatBox label="表面利回り" value={pct(resultA.ratios.grossYield)} positive={resultA.ratios.grossYield >= 0.04} />
-            <StatBox label="実質利回り" value={pct(resultA.ratios.netYield)} positive={resultA.ratios.netYield >= 0.02} negative={resultA.ratios.netYield < 0} />
-            <StatBox label="税引後CF(1年目)" value={yen(resultA.cashFlows[0]?.afterTaxCF)} positive={resultA.cashFlows[0]?.afterTaxCF >= 0} negative={resultA.cashFlows[0]?.afterTaxCF < 0} />
-            <StatBox label="売却手残り(標準)" value={yen(saleA.afterTaxProfit)} positive={saleA.afterTaxProfit >= 0} negative={saleA.afterTaxProfit < 0} />
-            <StatBox label="CAGR" value={cagr(saleA.cagr)} positive={saleA.cagr >= 0.03} negative={saleA.cagr < 0} />
+            <StatBox label="月々返済額" value={yen(resultA.monthlyPayment)} unit="/月" sub="元利均等返済" />
+            <StatBox label="表面利回り" value={pct(resultA.ratios.grossYield)} positive={resultA.ratios.grossYield >= 0.04} sub="4%以上が目安" />
+            <StatBox label="実質利回り" value={pct(resultA.ratios.netYield)} positive={resultA.ratios.netYield >= 0.02} negative={resultA.ratios.netYield < 0} sub="空室・費用控除後" />
+            <StatBox label="税引後CF(1年目)" value={yen(resultA.cashFlows[0]?.afterTaxCF)} positive={resultA.cashFlows[0]?.afterTaxCF >= 0} negative={resultA.cashFlows[0]?.afterTaxCF < 0} sub="税・ローン返済後の手取り" />
+            <StatBox label="売却手残り(標準)" value={yen(saleA.afterTaxProfit)} positive={saleA.afterTaxProfit >= 0} negative={saleA.afterTaxProfit < 0} sub={`${inputA.holdingYears}年後・譲渡税控除後`} />
+            <StatBox label="CAGR" value={cagr(saleA.cagr)} positive={saleA.cagr >= 0.03} negative={saleA.cagr < 0} sub="年平均複利リターン" />
           </div>
         </section>
 
@@ -129,12 +129,12 @@ export default function Dashboard() {
             {inputB.propertyName} — {yen(inputB.propertyPrice)}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <StatBox label="月々返済額" value={yen(resultB.monthlyPayment)} unit="/月" />
-            <StatBox label="表面利回り" value={pct(resultB.ratios.grossYield)} positive={resultB.ratios.grossYield >= 0.04} />
-            <StatBox label="実質利回り" value={pct(resultB.ratios.netYield)} positive={resultB.ratios.netYield >= 0.02} negative={resultB.ratios.netYield < 0} />
-            <StatBox label="税引後CF(1年目)" value={yen(resultB.cashFlows[0]?.afterTaxCF)} positive={resultB.cashFlows[0]?.afterTaxCF >= 0} negative={resultB.cashFlows[0]?.afterTaxCF < 0} />
-            <StatBox label="売却手残り(標準)" value={yen(saleB.afterTaxProfit)} positive={saleB.afterTaxProfit >= 0} negative={saleB.afterTaxProfit < 0} />
-            <StatBox label="CAGR" value={cagr(saleB.cagr)} positive={saleB.cagr >= 0.03} negative={saleB.cagr < 0} />
+            <StatBox label="月々返済額" value={yen(resultB.monthlyPayment)} unit="/月" sub="元利均等返済" />
+            <StatBox label="表面利回り" value={pct(resultB.ratios.grossYield)} positive={resultB.ratios.grossYield >= 0.04} sub="4%以上が目安" />
+            <StatBox label="実質利回り" value={pct(resultB.ratios.netYield)} positive={resultB.ratios.netYield >= 0.02} negative={resultB.ratios.netYield < 0} sub="空室・費用控除後" />
+            <StatBox label="税引後CF(1年目)" value={yen(resultB.cashFlows[0]?.afterTaxCF)} positive={resultB.cashFlows[0]?.afterTaxCF >= 0} negative={resultB.cashFlows[0]?.afterTaxCF < 0} sub="税・ローン返済後の手取り" />
+            <StatBox label="売却手残り(標準)" value={yen(saleB.afterTaxProfit)} positive={saleB.afterTaxProfit >= 0} negative={saleB.afterTaxProfit < 0} sub={`${inputB.holdingYears}年後・譲渡税控除後`} />
+            <StatBox label="CAGR" value={cagr(saleB.cagr)} positive={saleB.cagr >= 0.03} negative={saleB.cagr < 0} sub="年平均複利リターン" />
           </div>
         </section>
 
