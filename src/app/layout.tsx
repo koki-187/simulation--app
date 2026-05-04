@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     description: '不動産投資・住宅ローンシミュレーター',
     type: 'website',
     locale: 'ja_JP',
+    images: [{ url: '/mas-ogp.png', width: 1200, height: 400, alt: 'MAS - My Agent Simulation' }],
   },
   manifest: '/manifest.json',
   icons: {
