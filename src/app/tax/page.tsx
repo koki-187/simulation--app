@@ -24,7 +24,7 @@ function buildTaxHtml(t: TaxDetail, patternLabel: string): string {
         <tbody>
           ${[
             ['家賃収入', fmt(t.rentalRevenue)],
-            ['管理費・修繕積立金', fmt(t.managementExp)],
+            ['管理費・その他費用', fmt(t.managementExp)],
             ['損害保険料（概算）', fmt(t.insuranceEst)],
             ['固定資産税', fmt(t.fixedAssetTax)],
             ['減価償却費', fmt(t.depreciation)],
@@ -110,7 +110,7 @@ export default function TaxPage() {
   // PDF button uses resultA, resultB, activePattern for compare support
 
   const expenseRows = [
-    ['管理費・修繕積立金', yen(t.managementExp)],
+    ['管理費・その他費用', yen(t.managementExp)],
     ['損害保険料（概算）', yen(t.insuranceEst)],
     ['固定資産税', yen(t.fixedAssetTax)],
     ['減価償却費', yen(t.depreciation)],

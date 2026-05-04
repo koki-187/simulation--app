@@ -45,7 +45,7 @@ function calcSaleRow(
       acqCostForTax = propertyPrice - accumulatedDep; // 実額 - 累計減価償却
     }
 
-    const isLongTerm = year >= 5;
+    const isLongTerm = year > 5;   // 5年"超"が長期（5年ちょうどは短期）
     const taxRate = isLongTerm ? 0.20315 : 0.3963;
     const taxableGain = Math.max(0, salePrice - acqCostForTax - sellingCosts);
     const capitalGainsTax = Math.floor(taxableGain * taxRate);
@@ -121,7 +121,71 @@ function colorFor(key: MetricKey, val: number): string {
   return val >= 0 ? 'text-success-500' : 'text-danger-500';
 }
 
-// ── PDF エクスポート ──────────────────────────────────────────────────────
+// ── PDF エクスポート（html2canvas 方式 — 日本語対応）──────────────────────
+function buildSaleHtml(
+  rows: YearRow[],
+  input: SimInput,
+  patternLabel: string,
+  use5pctRule: boolean,
+): string {
+  const today = new Date().toLocaleDateString('ja-JP');
+  const ruleNote = use5pctRule ? '取得費：売却価格×5%（概算取得費ルール）' : '取得費：実際の取得価格−累計減価償却';
+
+  const tableRows = rows.map(row => {
+    const isStar = row.year === input.holdingYears;
+    const isShort = row.year <= 5;
+    const bg = isStar ? '#FFF7ED' : row.year % 2 === 0 ? '#F9FAFB' : '#FFFFFF';
+    const fmt = (v: number) => v >= 0
+      ? `<span style="color:#16A34A;font-weight:600">¥${Math.round(v).toLocaleString('ja-JP')}</span>`
+      : `<span style="color:#DC2626;font-weight:600">¥${Math.round(v).toLocaleString('ja-JP')}</span>`;
+    return `
+      <tr style="background:${bg}">
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:center;font-weight:bold;white-space:nowrap;">
+          ${isStar ? '★' : ''}${row.year}年${isShort ? '<span style="color:#EF4444;font-size:8px"> 短期</span>' : ''}
+        </td>
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">${fmt(row.pessimistic.afterTaxProfit)}</td>
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:#6B7280;">${cagr(row.pessimistic.cagr)}</td>
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">${fmt(row.standard.afterTaxProfit)}</td>
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:#6B7280;">${cagr(row.standard.cagr)}</td>
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">${fmt(row.optimistic.afterTaxProfit)}</td>
+        <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:#6B7280;">${cagr(row.optimistic.cagr)}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div style="padding:16px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
+      <div style="background:#1C2B4A;color:white;padding:10px 14px;border-radius:6px;margin-bottom:12px;">
+        <div style="font-size:15px;font-weight:bold;">売却シミュレーション全期間一覧${patternLabel ? ` — ${patternLabel}` : ''}</div>
+        <div style="font-size:10px;margin-top:4px;opacity:0.8;">
+          物件: ${input.propertyName} ／ 成長率: ${(input.growthRate * 100).toFixed(1)}%/年 ／ ${ruleNote} ／ 作成日: ${today}
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:9px;">
+        <thead>
+          <tr style="background:#1C2B4A;color:white;">
+            <th style="padding:4px 6px;border:1px solid #374151;" rowspan="2">保有年数</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:center;" colspan="2">悲観シナリオ (−10%)</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:center;" colspan="2">標準シナリオ</th>
+            <th style="padding:4px 6px;border:1px solid #374151;text-align:center;" colspan="2">楽観シナリオ (+10%)</th>
+          </tr>
+          <tr style="background:#374151;color:white;">
+            <th style="padding:3px 6px;border:1px solid #4B5563;text-align:right;">税引後手残り</th>
+            <th style="padding:3px 6px;border:1px solid #4B5563;text-align:right;">CAGR</th>
+            <th style="padding:3px 6px;border:1px solid #4B5563;text-align:right;">税引後手残り</th>
+            <th style="padding:3px 6px;border:1px solid #4B5563;text-align:right;">CAGR</th>
+            <th style="padding:3px 6px;border:1px solid #4B5563;text-align:right;">税引後手残り</th>
+            <th style="padding:3px 6px;border:1px solid #4B5563;text-align:right;">CAGR</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div style="margin-top:10px;font-size:8px;color:#6B7280;line-height:1.6;">
+        ★ = 入力フォームの保有年数 ／ 短期 = 5年以下（税率39.63%）／ 長期 = 5年超（税率20.315%）<br>
+        ※本シミュレーションは概算です。税務・法律事項は専門家にご相談ください。 | MAS
+      </div>
+    </div>`;
+}
+
 async function exportSalePDF(
   rowsA: YearRow[],
   rowsB: YearRow[],
@@ -130,122 +194,23 @@ async function exportSalePDF(
   showPattern: 'A' | 'B' | 'both',
   use5pctRule: boolean,
 ) {
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-  const NAVY: [number, number, number] = [28, 43, 74];
-  const ORANGE: [number, number, number] = [232, 99, 42];
-  const RED: [number, number, number]   = [220, 38, 38];
-  const GREEN: [number, number, number] = [34, 197, 94];
-
-  // Header
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, pageW, 18, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MAS Sale Simulation Report — All Holding Periods', 14, 8);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  const dateStr = new Date().toLocaleDateString('ja-JP');
-  const ruleNote = use5pctRule ? '  [Acquisition cost: 5% rule applied]' : '  [Acquisition cost: actual]';
-  doc.text(`Generated: ${dateStr}${ruleNote}`, 14, 15);
-
-  let curY = 24;
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const today = new Date().toLocaleDateString('ja-JP');
 
   const targets = showPattern === 'both'
-    ? [{ rows: rowsA, input: inputA, label: 'A' }, { rows: rowsB, input: inputB, label: 'B' }]
+    ? [{ rows: rowsA, input: inputA, label: 'パターンA' }, { rows: rowsB, input: inputB, label: 'パターンB' }]
     : showPattern === 'A'
-      ? [{ rows: rowsA, input: inputA, label: 'A' }]
-      : [{ rows: rowsB, input: inputB, label: 'B' }];
+      ? [{ rows: rowsA, input: inputA, label: '' }]
+      : [{ rows: rowsB, input: inputB, label: '' }];
 
-  for (const { rows, input, label } of targets) {
-    // Section header
-    doc.setFillColor(...ORANGE);
-    doc.rect(14, curY, 4, 6, 'F');
-    doc.setTextColor(...NAVY);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(
-      `Property ${label}: ${input.propertyName}  (Growth rate: ${(input.growthRate * 100).toFixed(1)}%/yr)`,
-      20, curY + 4.5
-    );
-    curY += 10;
+  const html = targets.map(t => buildSaleHtml(t.rows, t.input, t.label, use5pctRule)).join('');
+  const propName = showPattern === 'B' ? inputB.propertyName : inputA.propertyName;
 
-    const head = [['Hold', 'Pessimistic −10%', '', '', 'Standard', '', '', 'Optimistic +10%', '', '']];
-    const subHead = [['Years', 'After-Tax', 'CAGR', 'Multiple', 'After-Tax', 'CAGR', 'Multiple', 'After-Tax', 'CAGR', 'Multiple']];
-
-    const body = rows.map(row => {
-      const star = row.year === input.holdingYears ? '★' : '';
-      const shortTax = row.year <= 5 ? '*' : '';
-      return [
-        `${star}${row.year}yr${shortTax}`,
-        yen(row.pessimistic.afterTaxProfit),
-        cagr(row.pessimistic.cagr),
-        mult(row.pessimistic.investmentMultiple),
-        yen(row.standard.afterTaxProfit),
-        cagr(row.standard.cagr),
-        mult(row.standard.investmentMultiple),
-        yen(row.optimistic.afterTaxProfit),
-        cagr(row.optimistic.cagr),
-        mult(row.optimistic.investmentMultiple),
-      ];
-    });
-
-    autoTable(doc, {
-      startY: curY,
-      head: [...head, ...subHead],
-      body,
-      theme: 'grid',
-      headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', halign: 'center' },
-      bodyStyles: { fontSize: 7, halign: 'right' },
-      columnStyles: {
-        0: { halign: 'center', fontStyle: 'bold' },
-        1: { textColor: RED },
-        2: { textColor: RED },
-        3: { textColor: RED },
-        7: { textColor: GREEN },
-        8: { textColor: GREEN },
-        9: { textColor: GREEN },
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      didDrawCell: (data: any) => {
-        // Bold star rows
-        if (data.section === 'body' && data.column.index === 0) {
-          const raw = data.cell.raw as string;
-          if (raw.startsWith('★')) {
-            doc.setFont('helvetica', 'bold');
-          }
-        }
-      },
-      margin: { left: 14, right: 14 },
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    curY = (doc as any).lastAutoTable.finalY + 8;
-
-    if (curY > 170) {
-      doc.addPage();
-      curY = 14;
-    }
-  }
-
-  // Notes
-  doc.setFontSize(7);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  const notes = [
-    '* Short-term (≤5yr) tax rate: 39.63% / Long-term (>5yr): 20.315%',
-    '★ = Input form holding period  |  Standard sale price = property price × (1+growth)^years',
-    use5pctRule
-      ? 'Acquisition cost: 5% rule applied (for cases where original purchase cost is unknown)'
-      : 'Acquisition cost: Actual purchase price minus accumulated depreciation',
-    'MAS 売却シミュレーター — 本資料は試算値です。税務・法律事項は専門家にご相談ください。',
-  ];
-  const noteY = doc.internal.pageSize.getHeight() - 14;
-  notes.forEach((n, i) => doc.text(n, 14, noteY + i * 4));
-
-  doc.save(`MAS_売却シミュレーション_${dateStr.replace(/\//g, '')}.pdf`);
+  await elementToPdf({
+    html,
+    filename: `MAS_売却シミュレーション_${propName}_${today.replace(/\//g, '')}.pdf`,
+    orientation: 'landscape',
+  });
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────

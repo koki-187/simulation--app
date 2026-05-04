@@ -18,9 +18,9 @@ export default function Dashboard() {
     resultA.cashFlows.slice(0, 20).map((row, i) => ({
       year: `${row.year}年`,
       'A 税引後CF': Math.round(row.afterTaxCF / 10000),
-      'B 税引後CF': Math.round(resultB.cashFlows[i]?.afterTaxCF / 10000),
+      'B 税引後CF': Math.round((resultB.cashFlows[i]?.afterTaxCF ?? 0) / 10000),
       'A 累計CF': Math.round(row.cumulativeCF / 10000),
-      'B 累計CF': Math.round(resultB.cashFlows[i]?.cumulativeCF / 10000),
+      'B 累計CF': Math.round((resultB.cashFlows[i]?.cumulativeCF ?? 0) / 10000),
     })),
     [resultA.cashFlows, resultB.cashFlows]
   );
