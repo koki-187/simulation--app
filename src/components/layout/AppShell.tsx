@@ -43,7 +43,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-bold text-sm">MAS - My Agent Simulation</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/mas-logo-horizontal.png"
+            alt="MAS"
+            className="h-7 w-auto object-contain"
+            onError={(e) => {
+              const el = e.currentTarget as HTMLImageElement;
+              el.style.display = 'none';
+              const fallback = el.nextElementSibling as HTMLElement | null;
+              if (fallback) fallback.classList.remove('hidden');
+            }}
+          />
+          <span className="hidden font-bold text-sm">MAS - My Agent Simulation</span>
         </div>
         <ErrorBoundary>
           {children}
