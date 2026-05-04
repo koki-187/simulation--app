@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AppShell } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -74,9 +74,11 @@ async function exportComparePDF(
     </div>
   `;
 
+  const propA = inputA.propertyName || 'A';
+  const propB = inputB.propertyName || 'B';
   await elementToPdf({
     html,
-    filename: `MAS_AB比較_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_AB比較_${propA}vs${propB}_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }
@@ -87,7 +89,16 @@ export default function ComparePage() {
   );
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  const rows = [
+  // Safe accessors — guard against holdingYears < 10
+  const cf0A = resultA.cashFlows[0]?.afterTaxCF ?? 0;
+  const cf0B = resultB.cashFlows[0]?.afterTaxCF ?? 0;
+  const cf9A = resultA.cashFlows[9]?.cumulativeCF ?? resultA.cashFlows.at(-1)?.cumulativeCF ?? 0;
+  const cf9B = resultB.cashFlows[9]?.cumulativeCF ?? resultB.cashFlows.at(-1)?.cumulativeCF ?? 0;
+  const cf9Label = `累計CF(${Math.min(10, resultA.cashFlows.length)}年)`;
+  const saleA = resultA.saleScenarios[1];
+  const saleB = resultB.saleScenarios[1];
+
+  const rows = useMemo(() => [
     { label: '物件価格', fmtA: yen(inputA.propertyPrice), fmtB: yen(inputB.propertyPrice), betterA: inputA.propertyPrice <= inputB.propertyPrice },
     { label: '自己資金', fmtA: yen(inputA.equity), fmtB: yen(inputB.equity), betterA: inputA.equity <= inputB.equity },
     { label: '借入額', fmtA: yen(resultA.loanAmount), fmtB: yen(resultB.loanAmount), betterA: resultA.loanAmount <= resultB.loanAmount },
@@ -96,13 +107,14 @@ export default function ComparePage() {
     { label: '表面利回り', fmtA: pct(resultA.ratios.grossYield), fmtB: pct(resultB.ratios.grossYield), betterA: resultA.ratios.grossYield >= resultB.ratios.grossYield },
     { label: '実質利回り', fmtA: pct(resultA.ratios.netYield), fmtB: pct(resultB.ratios.netYield), betterA: resultA.ratios.netYield >= resultB.ratios.netYield },
     { label: '返済比率', fmtA: pct(resultA.ratios.repaymentRatioTax), fmtB: pct(resultB.ratios.repaymentRatioTax), betterA: resultA.ratios.repaymentRatioTax <= resultB.ratios.repaymentRatioTax },
-    { label: '税引後CF(1年目)', fmtA: yen(resultA.cashFlows[0].afterTaxCF), fmtB: yen(resultB.cashFlows[0].afterTaxCF), betterA: resultA.cashFlows[0].afterTaxCF >= resultB.cashFlows[0].afterTaxCF },
-    { label: '累計CF(10年)', fmtA: yen(resultA.cashFlows[9].cumulativeCF), fmtB: yen(resultB.cashFlows[9].cumulativeCF), betterA: resultA.cashFlows[9].cumulativeCF >= resultB.cashFlows[9].cumulativeCF },
-    { label: '売却手残り(標準)', fmtA: yen(resultA.saleScenarios[1].afterTaxProfit), fmtB: yen(resultB.saleScenarios[1].afterTaxProfit), betterA: resultA.saleScenarios[1].afterTaxProfit >= resultB.saleScenarios[1].afterTaxProfit },
-    { label: 'CAGR', fmtA: cagr(resultA.saleScenarios[1].cagr), fmtB: cagr(resultB.saleScenarios[1].cagr), betterA: resultA.saleScenarios[1].cagr >= resultB.saleScenarios[1].cagr },
-    { label: '投資倍率', fmtA: mult(resultA.saleScenarios[1].investmentMultiple), fmtB: mult(resultB.saleScenarios[1].investmentMultiple), betterA: resultA.saleScenarios[1].investmentMultiple >= resultB.saleScenarios[1].investmentMultiple },
+    { label: '税引後CF(1年目)', fmtA: yen(cf0A), fmtB: yen(cf0B), betterA: cf0A >= cf0B },
+    { label: cf9Label, fmtA: yen(cf9A), fmtB: yen(cf9B), betterA: cf9A >= cf9B },
+    { label: '売却手残り(標準)', fmtA: yen(saleA.afterTaxProfit), fmtB: yen(saleB.afterTaxProfit), betterA: saleA.afterTaxProfit >= saleB.afterTaxProfit },
+    { label: 'CAGR', fmtA: cagr(saleA.cagr), fmtB: cagr(saleB.cagr), betterA: saleA.cagr >= saleB.cagr },
+    { label: '投資倍率', fmtA: mult(saleA.investmentMultiple), fmtB: mult(saleB.investmentMultiple), betterA: saleA.investmentMultiple >= saleB.investmentMultiple },
     { label: 'DSCR', fmtA: resultA.ratios.dscr.toFixed(2)+'倍', fmtB: resultB.ratios.dscr.toFixed(2)+'倍', betterA: resultA.ratios.dscr >= resultB.ratios.dscr },
-  ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [inputA, inputB, resultA, resultB, cf0A, cf0B, cf9A, cf9B, cf9Label, saleA, saleB]);
 
   const aWins = rows.filter(r => r.betterA).length;
   const bWins = rows.length - aWins;
@@ -118,12 +130,12 @@ export default function ComparePage() {
   const radarData = [
     { subject: '利回り', A: Math.min(100, resultA.ratios.grossYield * 1000), B: Math.min(100, resultB.ratios.grossYield * 1000) },
     { subject: '実質利回り', A: Math.min(100, Math.max(0, resultA.ratios.netYield * 1000)), B: Math.min(100, Math.max(0, resultB.ratios.netYield * 1000)) },
-    { subject: 'CF(1年目)', A: Math.min(100, Math.max(0, (resultA.cashFlows[0].afterTaxCF + 2000000) / 40000)), B: Math.min(100, Math.max(0, (resultB.cashFlows[0].afterTaxCF + 2000000) / 40000)) },
-    { subject: 'CAGR', A: Math.min(100, Math.max(0, resultA.saleScenarios[1].cagr * 500)), B: Math.min(100, Math.max(0, resultB.saleScenarios[1].cagr * 500)) },
+    { subject: 'CF(1年目)', A: Math.min(100, Math.max(0, (cf0A + 2000000) / 40000)), B: Math.min(100, Math.max(0, (cf0B + 2000000) / 40000)) },
+    { subject: 'CAGR', A: Math.min(100, Math.max(0, saleA.cagr * 500)), B: Math.min(100, Math.max(0, saleB.cagr * 500)) },
     { subject: 'DSCR', A: Math.min(100, resultA.ratios.dscr * 40), B: Math.min(100, resultB.ratios.dscr * 40) },
     { subject: '低金利', A: Math.max(0, 100 - inputA.rate * 2000), B: Math.max(0, 100 - inputB.rate * 2000) },
     { subject: '低返済比率', A: Math.max(0, 100 - resultA.ratios.repaymentRatioTax * 300), B: Math.max(0, 100 - resultB.ratios.repaymentRatioTax * 300) },
-    { subject: '売却益', A: Math.min(100, Math.max(0, (resultA.saleScenarios[1].afterTaxProfit + 5000000) / 100000)), B: Math.min(100, Math.max(0, (resultB.saleScenarios[1].afterTaxProfit + 5000000) / 100000)) },
+    { subject: '売却益', A: Math.min(100, Math.max(0, (saleA.afterTaxProfit + 5000000) / 100000)), B: Math.min(100, Math.max(0, (saleB.afterTaxProfit + 5000000) / 100000)) },
   ];
 
   return (
@@ -150,12 +162,12 @@ export default function ComparePage() {
         {/* Score cards */}
         <div className="flex gap-4">
           <div className={`flex-1 rounded-xl p-4 text-center border-2 ${aWins >= bWins ? 'bg-orange-50 border-orange-500' : 'bg-neutral-50 border-neutral-200'}`}>
-            <div className="text-xs font-bold text-orange-500 mb-1">Pattern A — {inputA.propertyName}</div>
+            <div className="text-xs font-bold text-orange-500 mb-1">パターンA — {inputA.propertyName}</div>
             <div className={`text-3xl font-bold ${aWins >= bWins ? 'text-orange-500' : 'text-navy-500'}`}>{aWins}</div>
             <div className="text-xs text-neutral-500">指標でリード</div>
           </div>
           <div className={`flex-1 rounded-xl p-4 text-center border-2 ${bWins > aWins ? 'bg-orange-50 border-orange-500' : 'bg-neutral-50 border-neutral-200'}`}>
-            <div className="text-xs font-bold text-orange-300 mb-1">Pattern B — {inputB.propertyName}</div>
+            <div className="text-xs font-bold text-orange-300 mb-1">パターンB — {inputB.propertyName}</div>
             <div className={`text-3xl font-bold ${bWins > aWins ? 'text-orange-500' : 'text-navy-500'}`}>{bWins}</div>
             <div className="text-xs text-neutral-500">指標でリード</div>
           </div>
@@ -190,8 +202,8 @@ export default function ComparePage() {
             <thead>
               <tr className="bg-neutral-50 border-b border-neutral-200">
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-600">指標</th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold text-orange-500">Pattern A</th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold text-navy-500">Pattern B</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-orange-500">パターンA</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-navy-500">パターンB</th>
                 <th className="px-4 py-2.5 text-center text-xs font-semibold text-neutral-500">優位</th>
               </tr>
             </thead>
@@ -201,7 +213,11 @@ export default function ComparePage() {
                   <td className="px-4 py-2.5 text-xs font-medium text-neutral-700">{row.label}</td>
                   <td className={`px-4 py-2.5 text-right text-xs font-semibold ${row.betterA ? 'text-success-500 bg-success-50' : ''}`}>{row.fmtA}</td>
                   <td className={`px-4 py-2.5 text-right text-xs font-semibold ${!row.betterA ? 'text-success-500 bg-success-50' : ''}`}>{row.fmtB}</td>
-                  <td className="px-4 py-2.5 text-center text-xs">{row.betterA ? '🟠 A' : '🟡 B'}</td>
+                  <td className="px-4 py-2.5 text-center text-xs font-bold">
+                    {row.betterA
+                      ? <span className="text-orange-500">A が有利</span>
+                      : <span className="text-navy-500">B が有利</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
