@@ -52,163 +52,116 @@ interface FundingPlanData {
   createdDate: string;
 }
 
-async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const NAVY = '#1C2B4A';
-  const ORANGE = '#E8632A';
-  const LIGHT = '#F5F7FA';
+function buildFundingPlanHtml(data: FundingPlanData): string {
+  const fmt = (n: number) => Math.round(n).toLocaleString('ja-JP');
+  const fmtM = (n: number) => fmt(n) + '万円';
 
   const totalFunds = data.propertyPrice + data.miscExpenses;
-  const loanAmount = totalFunds - data.equity;
+  const loanAmount = Math.max(0, totalFunds - data.equity);
   const equityRatio = totalFunds > 0 ? (data.equity / totalFunds) * 100 : 0;
-  const monthlyLoan = calcMonthly(loanAmount * 10000, data.rate, data.termYears);
-  const totalPayment = monthlyLoan * data.termYears * 12;
+  const monthlyLoanYen = calcMonthly(loanAmount * 10000, data.rate, data.termYears);
+  const totalPayment = monthlyLoanYen * data.termYears * 12;
   const totalInterest = totalPayment - loanAmount * 10000;
   const effectiveRent = data.monthlyRentPlan * (1 - data.vacancyRate / 100);
-  const monthlyCF =
-    effectiveRent - data.managementFeeMonthly - data.fixedAssetTaxMonthly - monthlyLoan / 10000;
-  const grossYield =
-    totalFunds > 0 ? ((data.monthlyRentPlan * 12) / totalFunds) * 100 : 0;
-  const annualExpenses =
-    (data.managementFeeMonthly + data.fixedAssetTaxMonthly) * 12;
-  const netYield =
-    totalFunds > 0
-      ? (((data.monthlyRentPlan * (1 - data.vacancyRate / 100)) * 12 - annualExpenses) / totalFunds) * 100
-      : 0;
+  const managementPlusFixed = data.managementFeeMonthly + data.fixedAssetTaxMonthly;
+  const monthlyCF = effectiveRent - managementPlusFixed - monthlyLoanYen / 10000;
+  const grossYield = totalFunds > 0 ? (data.monthlyRentPlan * 12 / totalFunds) * 100 : 0;
+  const annualExpenses = managementPlusFixed * 12;
+  const netYield = totalFunds > 0 ? ((effectiveRent * 12 - annualExpenses) / totalFunds) * 100 : 0;
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210;
-  const MARGIN = 14;
-  const CONTENT_W = W - MARGIN * 2;
+  const tdL = (t: string) =>
+    `<td style="padding:3px 8px;border:1px solid #E5E7EB;font-size:9px;font-weight:600;background:#EEF1F6;color:#1C2B4A;width:45%;">${t}</td>`;
+  const tdV = (t: string) =>
+    `<td style="padding:3px 8px;border:1px solid #E5E7EB;font-size:9px;text-align:right;">${t}</td>`;
 
-  // ── Header bar ──────────────────────────────────────────────────────────
-  doc.setFillColor(NAVY);
-  doc.rect(0, 0, W, 22, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor('#FFFFFF');
-  doc.text('資金計画書', MARGIN, 14);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`MAS  作成日: ${data.createdDate}`, W - MARGIN, 14, { align: 'right' });
+  const twoCol = (rows: [string, string][]) =>
+    `<table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      ${rows.map(([l, v], i) => `<tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">${tdL(l)}${tdV(v)}</tr>`).join('')}
+    </table>`;
 
-  // ── Property name subtitle ────────────────────────────────────────────
-  doc.setFillColor(LIGHT);
-  doc.rect(0, 22, W, 10, 'F');
-  doc.setTextColor(NAVY);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.propertyName || '（物件名未入力）', MARGIN, 29);
+  const sectionHd = (title: string) =>
+    `<div style="display:flex;align-items:center;gap:6px;margin:12px 0 4px;">
+      <div style="width:4px;height:16px;background:#E8632A;border-radius:2px;flex-shrink:0;"></div>
+      <div style="font-size:11px;font-weight:700;color:#1C2B4A;">${title}</div>
+    </div>`;
 
-  let y = 36;
+  return `
+    <div style="font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;color:#111827;padding:4px;">
+      <div style="background:#1C2B4A;color:white;padding:10px 14px;border-radius:6px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;">
+        <div>
+          <div style="font-size:15px;font-weight:700;letter-spacing:0.05em;">資金計画書</div>
+          <div style="font-size:11px;margin-top:2px;opacity:0.85;">${data.propertyName || '（物件名未入力）'}</div>
+        </div>
+        <div style="font-size:9px;opacity:0.7;text-align:right;">作成日: ${data.createdDate}<br>担当: ${data.agentName || 'MAS'}</div>
+      </div>
 
-  // ── Helper to draw section header ────────────────────────────────────
-  function sectionHeader(title: string): void {
-    doc.setFillColor(ORANGE);
-    doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
-    doc.setTextColor('#FFFFFF');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, MARGIN + 3, y + 5);
-    y += 7;
-  }
+      ${sectionHd('１．物件情報')}
+      ${twoCol([
+        ['物件名', data.propertyName || '―'],
+        ['所在地', data.location || '―'],
+        ['物件価格', fmtM(data.propertyPrice)],
+        ['物件種別', data.propertyType || '―'],
+        ['建物構造', data.structure || '―'],
+        ['築年', data.builtYear ? String(data.builtYear) + '年' : '―'],
+      ])}
 
-  function twoColTable(rows: [string, string][]): void {
-    autoTable(doc, {
-      startY: y,
-      margin: { left: MARGIN, right: MARGIN },
-      tableWidth: CONTENT_W,
-      head: [],
-      body: rows,
-      styles: { fontSize: 8.5, cellPadding: 2.5, font: 'helvetica' },
-      columnStyles: {
-        0: { cellWidth: 55, fontStyle: 'bold', textColor: NAVY, fillColor: LIGHT },
-        1: { cellWidth: CONTENT_W - 55, textColor: '#333333' },
-      },
-      theme: 'plain',
-      tableLineColor: '#E0E4EC',
-      tableLineWidth: 0.2,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 4;
-  }
+      ${sectionHd('２．資金計画')}
+      ${twoCol([
+        ['物件価格', fmtM(data.propertyPrice)],
+        ['諸費用', fmtM(data.miscExpenses)],
+        ['必要総資金', fmtM(totalFunds)],
+        ['自己資金', fmtM(data.equity)],
+        ['自己資金比率', equityRatio.toFixed(1) + '%'],
+        ['借入金額', fmtM(loanAmount)],
+      ])}
 
-  // ── Section 1: 物件情報 ──────────────────────────────────────────────
-  sectionHeader('１．物件情報');
-  twoColTable([
-    ['物件名', data.propertyName || '―'],
-    ['所在地', data.location || '―'],
-    ['物件価格', fmtMan(data.propertyPrice)],
-    ['物件種別', data.propertyType || '―'],
-    ['建物構造', data.structure || '―'],
-    ['築年', data.builtYear ? `${data.builtYear}年` : '―'],
-  ]);
+      ${sectionHd('３．ローン条件')}
+      ${twoCol([
+        ['金融機関', data.lenderName || '―'],
+        ['金利（年）', data.rate.toFixed(3) + '%'],
+        ['返済期間', String(data.termYears) + '年'],
+        ['返済方式', data.repaymentMethod],
+        ['月々返済額', fmt(Math.round(monthlyLoanYen)) + '円'],
+        ['総支払額', fmt(Math.round(totalPayment / 10000)) + '万円'],
+        ['総利息', fmt(Math.round(totalInterest / 10000)) + '万円'],
+        ['団体信用生命保険', data.dansin ? '加入' : '非加入'],
+      ])}
 
-  // ── Section 2: 資金計画 ──────────────────────────────────────────────
-  sectionHeader('２．資金計画');
-  twoColTable([
-    ['物件価格', fmtMan(data.propertyPrice)],
-    ['諸費用', fmtMan(data.miscExpenses)],
-    ['必要総資金', fmtMan(totalFunds)],
-    ['自己資金', fmtMan(data.equity)],
-    ['借入金額', fmtMan(loanAmount)],
-    ['自己資金比率', equityRatio.toFixed(1) + '%'],
-  ]);
+      ${sectionHd('４．月次収支計画')}
+      ${twoCol([
+        ['月額家賃収入（予定）', data.monthlyRentPlan.toFixed(2) + '万円'],
+        ['空室率', data.vacancyRate.toFixed(1) + '%'],
+        ['実効家賃収入', effectiveRent.toFixed(2) + '万円'],
+        ['管理費・修繕積立金', managementPlusFixed.toFixed(2) + '万円/月'],
+        ['月額ローン返済額', fmt(Math.round(monthlyLoanYen)) + '円'],
+        ['月次手取り（税前）', (monthlyCF >= 0 ? '+' : '') + monthlyCF.toFixed(2) + '万円'],
+        ['表面利回り', grossYield.toFixed(2) + '%'],
+        ['実質利回り', netYield.toFixed(2) + '%'],
+      ])}
 
-  // ── Section 3: ローン条件 ────────────────────────────────────────────
-  sectionHeader('３．ローン条件');
-  twoColTable([
-    ['金融機関', data.lenderName || '―'],
-    ['金利（年）', data.rate.toFixed(3) + '%'],
-    ['返済期間', `${data.termYears}年`],
-    ['返済方式', data.repaymentMethod],
-    ['月々返済額', `${fmt(Math.round(monthlyLoan))}円`],
-    ['総支払額', `${fmt(Math.round(totalPayment / 10000))}万円`],
-    ['総利息', `${fmt(Math.round(totalInterest / 10000))}万円`],
-    ['団体信用生命保険', data.dansin ? '加入' : '非加入'],
-  ]);
+      ${sectionHd('５．お客様情報')}
+      ${twoCol([
+        ['お客様名', data.customerName || '―'],
+        ['生年月日', data.birthDate || '―'],
+        ['年収（源泉）', fmtM(data.annualIncome)],
+        ['勤務先', data.employer || '―'],
+        ['勤続年数', String(data.yearsEmployed) + '年'],
+        ['担当エージェント', data.agentName || 'MAS'],
+      ])}
 
-  // ── Section 4: 月次収支計画 ───────────────────────────────────────────
-  sectionHeader('４．月次収支計画');
-  twoColTable([
-    ['月額家賃収入（予定）', fmtMan(data.monthlyRentPlan)],
-    ['空室率', data.vacancyRate.toFixed(1) + '%'],
-    ['実効家賃収入', `${effectiveRent.toFixed(2)}万円`],
-    ['管理費・修繕積立金', `${data.managementFeeMonthly.toFixed(2)}万円/月`],
-    ['固定資産税（月割）', `${data.fixedAssetTaxMonthly.toFixed(2)}万円/月`],
-    ['月額ローン返済額', `${fmt(Math.round(monthlyLoan))}円`],
-    ['月次手取り（税前）', `${monthlyCF.toFixed(2)}万円`],
-    ['表面利回り', grossYield.toFixed(2) + '%'],
-    ['実質利回り', netYield.toFixed(2) + '%'],
-  ]);
+      <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
+        MAS - My Agent Simulation ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
+      </div>
+    </div>`;
+}
 
-  // ── Section 5: お客様情報 ─────────────────────────────────────────────
-  sectionHeader('５．お客様情報');
-  twoColTable([
-    ['お客様名', data.customerName || '―'],
-    ['生年月日', data.birthDate || '―'],
-    ['年収（源泉）', fmtMan(data.annualIncome)],
-    ['勤務先', data.employer || '―'],
-    ['勤続年数', `${data.yearsEmployed}年`],
-    ['担当エージェント', data.agentName || 'MAS'],
-  ]);
-
-  // ── Footer ────────────────────────────────────────────────────────────
-  const footerY = 287;
-  doc.setFillColor(NAVY);
-  doc.rect(0, footerY - 1, W, 10, 'F');
-  doc.setTextColor('#FFFFFF');
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text(
-    '本資料はMASが作成した参考情報です。実際の融資条件は金融機関にご確認ください。',
-    W / 2,
-    footerY + 5,
-    { align: 'center' }
-  );
-
-  doc.save(`資金計画書_${data.propertyName || 'document'}_${data.createdDate}.pdf`);
+async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  await elementToPdf({
+    html: buildFundingPlanHtml(data),
+    filename: 'MAS_資金計画書_' + (data.propertyName || '物件') + '_' + data.createdDate + '.pdf',
+    orientation: 'portrait',
+  });
 }
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
@@ -255,7 +208,7 @@ export default function FundingPlanPage() {
   const [employer, setEmployer] = useState('');
   const [yearsEmployed, setYearsEmployed] = useState<number>(5);
   const [agentName, setAgentName] = useState('MAS');
-  const [createdDate, setCreatedDate] = useState('2026-04-26');
+  const [createdDate, setCreatedDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // ── Derived calculations ───────────────────────────────────────────────
   const totalFunds = useMemo(() => propertyPrice + miscExpenses, [propertyPrice, miscExpenses]);

@@ -121,124 +121,94 @@ function calcMaxBorrowable(
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 
-async function exportLoanComparePDF(params: PDFParams): Promise<void> {
-  const { jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
-  const doc = new jsPDF('p', 'mm', 'a4');
+function buildLoanCompareHtml(params: PDFParams): string {
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-  const navyRGB: [number, number, number] = [28, 43, 74];
+  const fmt = (n: number) => Math.round(n).toLocaleString('ja-JP');
 
-  doc.setFillColor(...navyRGB);
-  doc.rect(0, 0, 210, 28, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('金融機関比較レポート', 14, 13);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('MAS', 14, 20);
-  doc.text(today, 196, 20, { align: 'right' });
+  const tdL = (t: string) =>
+    `<td style="padding:3px 8px;border:1px solid #E5E7EB;font-size:9px;font-weight:600;background:#EEF1F6;color:#1C2B4A;">${t}</td>`;
+  const tdC = (t: string) =>
+    `<td style="padding:3px 6px;border:1px solid #E5E7EB;font-size:9px;text-align:center;">${t}</td>`;
 
-  doc.setTextColor(16, 24, 43);
+  const condRows: [string, string][] = [
+    ['比較モード', params.mode === 'home' ? '住宅ローン' : '収益用不動産'],
+    ['借入額', params.principal.toLocaleString() + '万円'],
+    ['返済期間', String(params.years) + '年'],
+    ['返済方式', params.method],
+    ['年収', params.annualIncome.toLocaleString() + '万円'],
+    ['年齢', String(params.borrowerAge) + '歳'],
+    ['他借入年返済額', String(params.otherLoanPayment) + '万円'],
+  ];
 
-  let y = 36;
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('借入条件', 14, y);
-  y += 6;
+  const bankHeaders = params.results
+    .map(r => `<th style="padding:4px 6px;background:#1C2B4A;color:white;font-size:9px;border:1px solid #374151;text-align:center;">${r.name}</th>`)
+    .join('');
 
-  autoTable(doc, {
-    startY: y,
-    head: [['項目', '内容']],
-    body: [
-      ['借入額', `${params.principal.toLocaleString()}万円`],
-      ['返済期間', `${params.years}年`],
-      ['返済方式', params.method],
-      ['比較モード', params.mode === 'home' ? '住宅ローン' : '収益用不動産'],
-    ],
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: navyRGB, textColor: [255, 255, 255], fontStyle: 'bold' },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
-    margin: { left: 14, right: 14 },
+  const compRows: { label: string; vals: (r: LoanResult) => string }[] = [
+    { label: '実行金利',   vals: r => '<span style="color:#E8632A;font-weight:700;">' + r.rate.toFixed(3) + '%</span>' },
+    { label: '月々返済額', vals: r => '<strong>' + fmt(Math.round(r.monthlyPayment)) + '円</strong>' },
+    { label: '総支払額',   vals: r => fmt(Math.round(r.totalPayment / 10000)) + '万円' },
+    { label: '総利息',     vals: r => '<span style="color:#E74C3C;font-weight:600;">' + fmt(Math.round(r.totalInterest / 10000)) + '万円</span>' },
+    { label: '返済比率',   vals: r => r.repaymentRatio.toFixed(1) + '% ' + (r.isRepaymentOk ? '✓適正' : '⚠超過') },
+    { label: '借入上限',   vals: r => r.isHomeLoan ? fmt(Math.round(r.maxBorrowable)) + '万円' : '個別審査' },
+    { label: '完済年齢',   vals: r => String(r.completionAge) + '歳 ' + (r.isAgeOk ? 'OK' : '超過') },
+    { label: '手数料',     vals: r => r.processingFee },
+    { label: '特徴',       vals: r => r.features },
+  ];
+
+  const sectionHd = (title: string) =>
+    `<div style="display:flex;align-items:center;gap:6px;margin:12px 0 4px;">
+      <div style="width:4px;height:16px;background:#E8632A;border-radius:2px;flex-shrink:0;"></div>
+      <div style="font-size:11px;font-weight:700;color:#1C2B4A;">${title}</div>
+    </div>`;
+
+  return `
+    <div style="font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;color:#111827;padding:4px;">
+      <div style="background:#1C2B4A;color:white;padding:10px 14px;border-radius:6px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;">
+        <div style="font-size:15px;font-weight:700;letter-spacing:0.05em;">金融機関比較レポート</div>
+        <div style="font-size:9px;opacity:0.7;">作成日: ${today}</div>
+      </div>
+
+      ${sectionHd('借入・借入者条件')}
+      <table style="width:55%;border-collapse:collapse;margin-bottom:10px;">
+        ${condRows.map(([l, v], i) => `
+          <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+            ${tdL(l)}
+            <td style="padding:3px 8px;border:1px solid #E5E7EB;font-size:9px;text-align:right;">${v}</td>
+          </tr>`).join('')}
+      </table>
+
+      ${sectionHd('金融機関比較表')}
+      <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:8px;">
+        <thead>
+          <tr>
+            <th style="padding:4px 8px;background:#1C2B4A;color:white;font-size:9px;border:1px solid #374151;text-align:left;">指標</th>
+            ${bankHeaders}
+          </tr>
+        </thead>
+        <tbody>
+          ${compRows.map(({ label, vals }, i) => `
+            <tr style="background:${i % 2 === 0 ? 'white' : '#F9FAFB'}">
+              ${tdL(label)}
+              ${params.results.map(r => tdC(vals(r))).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
+        MAS - My Agent Simulation ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
+      </div>
+    </div>`;
+}
+
+async function exportLoanComparePDF(params: PDFParams): Promise<void> {
+  const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  await elementToPdf({
+    html: buildLoanCompareHtml(params),
+    filename: 'MAS_金融機関比較_' + today.replace(/\//g, '') + '.pdf',
+    orientation: 'portrait',
   });
-
-  y = ((doc as any).lastAutoTable?.finalY ?? y + 40) + 8;
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('借入者条件', 14, y);
-  y += 6;
-
-  autoTable(doc, {
-    startY: y,
-    head: [['項目', '内容']],
-    body: [
-      ['年収', `${params.annualIncome.toLocaleString()}万円`],
-      ['年齢', `${params.borrowerAge}歳`],
-      ['他借入年返済額', `${params.otherLoanPayment}万円`],
-    ],
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: navyRGB, textColor: [255, 255, 255], fontStyle: 'bold' },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
-    margin: { left: 14, right: 14 },
-  });
-
-  y = ((doc as any).lastAutoTable?.finalY ?? y + 40) + 8;
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('月々返済額（概略グラフ）', 14, y);
-  y += 6;
-
-  const maxPayment = Math.max(...params.results.map(r => r.monthlyPayment));
-  const barMaxWidth = 100;
-  params.results.forEach((r, i) => {
-    const barW = maxPayment > 0 ? (r.monthlyPayment / maxPayment) * barMaxWidth : 0;
-    doc.setFillColor(...navyRGB);
-    doc.rect(60, y + i * 10, barW, 6, 'F');
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(16, 24, 43);
-    doc.text(r.name.slice(0, 12), 14, y + i * 10 + 4.5);
-    doc.text(`${Math.round(r.monthlyPayment).toLocaleString()}円`, 165, y + i * 10 + 4.5);
-  });
-  y += params.results.length * 10 + 10;
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('金融機関比較表', 14, y);
-  y += 4;
-
-  const tableHead = [['金融機関', '金利', '審査金利', '月々返済額', '総利息', '返済比率', '借入上限', '完済年齢', '手数料']];
-  const tableBody = params.results.map(r => [
-    r.name,
-    `${r.rate.toFixed(3)}%`,
-    `${(r as LoanResult & { auditRate?: number }).auditRate ?? '-'}%`,
-    `${Math.round(r.monthlyPayment).toLocaleString()}円`,
-    `${Math.round(r.totalInterest / 10000).toLocaleString()}万円`,
-    `${r.repaymentRatio.toFixed(1)}% ${r.isRepaymentOk ? '✓' : '⚠'}`,
-    `${Math.round(r.maxBorrowable).toLocaleString()}万円`,
-    `${r.completionAge}歳 ${r.isAgeOk ? 'OK' : '超過'}`,
-    r.processingFee,
-  ]);
-
-  autoTable(doc, {
-    startY: y,
-    head: tableHead,
-    body: tableBody,
-    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-    headStyles: { fillColor: navyRGB, textColor: [255, 255, 255], fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245, 246, 248] },
-    margin: { left: 14, right: 14 },
-  });
-
-  const pageHeight = 297;
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(150, 150, 150);
-  doc.text('本資料はMASが作成した参考情報です', 105, pageHeight - 8, { align: 'center' });
-
-  doc.save(`金融機関比較レポート_${today}.pdf`);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
