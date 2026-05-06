@@ -109,7 +109,7 @@ export default function Dashboard() {
         {/* Pattern A Quick Stats */}
         <section>
           <h2 className="text-sm font-bold text-navy-500 mb-3 flex items-center gap-2">
-            <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded">Pattern A</span>
+            <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded">パターンA</span>
             {inputA.propertyName} — {yen(inputA.propertyPrice)}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -125,7 +125,7 @@ export default function Dashboard() {
         {/* Pattern B Quick Stats */}
         <section>
           <h2 className="text-sm font-bold text-navy-500 mb-3 flex items-center gap-2">
-            <span className="bg-orange-300 text-navy-500 text-xs px-2 py-0.5 rounded font-bold">Pattern B</span>
+            <span className="bg-orange-300 text-navy-500 text-xs px-2 py-0.5 rounded font-bold">パターンB</span>
             {inputB.propertyName} — {yen(inputB.propertyPrice)}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -180,17 +180,17 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-neutral-50 border-b border-neutral-100">
-                  <th className="px-4 py-2 text-left text-xs text-neutral-500 font-semibold">シナリオ</th>
+                  <th scope="col" className="px-4 py-2 text-left text-xs text-neutral-500 font-semibold">シナリオ</th>
                   {['悲観(−10%)', '標準', '楽観(+10%)'].map(s => (
-                    <th key={s} colSpan={2} className="px-4 py-2 text-center text-xs text-neutral-500 font-semibold">{s}</th>
+                    <th key={s} scope="col" colSpan={2} className="px-4 py-2 text-center text-xs text-neutral-500 font-semibold">{s}</th>
                   ))}
                 </tr>
                 <tr className="bg-neutral-50 border-b border-neutral-200">
-                  <th className="px-4 py-2 text-left text-xs text-neutral-400"></th>
+                  <th scope="col" className="px-4 py-2 text-left text-xs text-neutral-400"></th>
                   {[0,1,2].map(i => (
                     <React.Fragment key={i}>
-                      <th className="px-3 py-1.5 text-center text-xs font-semibold text-orange-500">A</th>
-                      <th className="px-3 py-1.5 text-center text-xs font-semibold text-orange-300">B</th>
+                      <th scope="col" className="px-3 py-1.5 text-center text-xs font-semibold text-orange-500">パターンA</th>
+                      <th scope="col" className="px-3 py-1.5 text-center text-xs font-semibold text-orange-300">パターンB</th>
                     </React.Fragment>
                   ))}
                 </tr>

@@ -1,5 +1,8 @@
 import { TaxDetail, SaleScenario } from './types';
 
+/** 復興特別所得税 — 2013〜2037年は所得税額の2.1%が上乗せ */
+const RECONSTRUCTION_SURTAX = 1.021;
+
 /** Progressive income tax rates (2024, 所得税+復興特別所得税（住民税はcalcResidentTaxで別途加算）) */
 export const TAX_BRACKETS = [
   { limit: 1_950_000,   rate: 0.05,  deduction: 0 },
@@ -20,7 +23,7 @@ export function calcIncomeTaxRate(income: number): number {
 export function calcIncomeTax(income: number): number {
   if (income <= 0) return 0;
   const bracket = TAX_BRACKETS.find(b => income <= b.limit)!;
-  return Math.floor((income * bracket.rate - bracket.deduction) * 1.021);
+  return Math.floor((income * bracket.rate - bracket.deduction) * RECONSTRUCTION_SURTAX);
 }
 
 /** Resident tax: flat 10% */

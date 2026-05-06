@@ -60,7 +60,10 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
       <span className="label-cell flex-1 min-w-0 truncate">{label}</span>
       <div className="flex items-center gap-1 shrink-0">
         {readOnly ? (
-          <span className="text-right font-mono text-sm text-navy-500 font-semibold min-w-[120px]">
+          <span
+            aria-label={`${label}: ${FMT[fmt](value)}`}
+            className="text-right font-mono text-sm text-navy-500 font-semibold min-w-[120px]"
+          >
             {FMT[fmt](value)}
           </span>
         ) : (
@@ -74,6 +77,7 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
             min={min}
             max={max}
             step={step}
+            aria-label={label}
             className="input-cell w-32 text-right"
           />
         )}

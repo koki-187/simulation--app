@@ -17,7 +17,7 @@ export function simulate(input: SimInput): SimResult {
   const monthlyPayment = calcPMT(rate, termYears, loanAmount);
   const totalPayment = monthlyPayment * termYears * 12;
   const totalInterest = totalPayment - loanAmount;
-  const effectiveMonthlyRent = Math.floor(monthlyRent * (1 - vacancyRate));
+  const effectiveMonthlyRent = Math.round(monthlyRent * (1 - vacancyRate));
 
   // ── Depreciation ─────────────────────────────────────────────────────────────
   const buildingPrice = Math.floor(propertyPrice * buildingRatio);
