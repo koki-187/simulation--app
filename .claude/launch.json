@@ -5,6 +5,7 @@
       "name": "mas",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
+      "cwd": "C:\\Users\\reale\\mas",
       "port": 3000
     }
   ]

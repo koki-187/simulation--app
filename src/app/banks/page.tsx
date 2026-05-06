@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export default function BanksPage() {
   const { resultA } = useSimStore();
   const banks = resultA.banks;
-  const minInterest = Math.min(...banks.map(b => b.totalInterest));
+  const minInterest = banks.length > 0 ? Math.min(...banks.map(b => b.totalInterest)) : 0;
 
   return (
     <AppShell>
@@ -35,7 +35,7 @@ export default function BanksPage() {
             <thead>
               <tr className="bg-neutral-50 border-b border-neutral-200">
                 {['金融機関','金利','変動/固定','返済期間','月々返済額','総支払額','総利息','判定'].map(h => (
-                  <th key={h} className="table-header">{h}</th>
+                  <th key={h} scope="col" className="table-header">{h}</th>
                 ))}
               </tr>
             </thead>

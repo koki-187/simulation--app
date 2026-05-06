@@ -113,7 +113,6 @@ export default function ComparePage() {
     { label: 'CAGR', fmtA: cagr(saleA.cagr), fmtB: cagr(saleB.cagr), betterA: saleA.cagr >= saleB.cagr },
     { label: '投資倍率', fmtA: mult(saleA.investmentMultiple), fmtB: mult(saleB.investmentMultiple), betterA: saleA.investmentMultiple >= saleB.investmentMultiple },
     { label: 'DSCR', fmtA: resultA.ratios.dscr.toFixed(2)+'倍', fmtB: resultB.ratios.dscr.toFixed(2)+'倍', betterA: resultA.ratios.dscr >= resultB.ratios.dscr },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [inputA, inputB, resultA, resultB, cf0A, cf0B, cf9A, cf9B, cf9Label, saleA, saleB]);
 
   const aWins = rows.filter(r => r.betterA).length;
@@ -201,10 +200,10 @@ export default function ComparePage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-neutral-50 border-b border-neutral-200">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-600">指標</th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold text-orange-500">パターンA</th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold text-navy-500">パターンB</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-neutral-500">優位</th>
+                <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-600">指標</th>
+                <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-orange-500">パターンA</th>
+                <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-navy-500">パターンB</th>
+                <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-neutral-500">優位</th>
               </tr>
             </thead>
             <tbody>

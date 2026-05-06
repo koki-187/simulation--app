@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { AppShell } from '@/components/layout';
 import { useHomeLoanStore, type PrepayEvent } from '@/store/homeLoanStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -163,7 +163,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NumberInput({
+const NumberInput = memo(function NumberInput({
   label,
   value,
   onChange,
@@ -200,7 +200,7 @@ function NumberInput({
       {hint && <p className="text-xs text-neutral-400">{hint}</p>}
     </div>
   );
-}
+});
 
 function KpiCard({
   label,

@@ -283,7 +283,7 @@ export default function RefinancePage() {
       if (sortBy === 'rate') return a.newRate - b_.newRate;
       return a.processingFee - b_.processingFee;
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `input` is a derived object rebuilt each render; listing its fields directly to avoid stale closures
     [eligibleBanks, currentBalance, currentRate, remainingYears, prepaymentPenalty, effectiveRegistrationFee, otherFees, sortBy, refreshedRates]
   );
 
@@ -291,7 +291,7 @@ export default function RefinancePage() {
     scenarioDelta > 0
       ? results.map(r => ({ ...r, scenario: calcRefinanceScenario(r, input, scenarioDelta) }))
       : results.map(r => ({ ...r, scenario: null })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `input` is rebuilt each render; results already incorporates all loan fields
     [results, scenarioDelta]
   );
 
@@ -330,7 +330,7 @@ export default function RefinancePage() {
       }
       return entry;
     }).filter(d => d.month % 6 === 0 || d.month === 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `input` is a derived object; selectedResult already encapsulates loan params
   }, [selectedResult, months, scenarioDelta]);
 
   const currentMonthly = useMemo(() => {
