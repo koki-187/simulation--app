@@ -133,6 +133,38 @@ function dansinIcon(dansin: string): string {
   return '';
 }
 
+function getBankCategory(id: string): string {
+  const netBankKeywords = ['住信sbi', 'sbi-shinsei', 'aujibun', 'rakuten', 'sony', 'paypay', 'ion', 'ui-bank', 'aruhi'];
+  if (netBankKeywords.some(k => id.includes(k.replace('-', '')))) return 'ネット銀行';
+  if (['mufg', 'mizuho', 'smbc', 'smtb'].includes(id)) return '都市銀行';
+  if (id === 'flat35') return '固定金利';
+  if (
+    id.includes('shinkin') ||
+    ['johnan-shinkin', 'tamashin', 'yokoshin', 'saishin', 'kawaguchi-shinkin', 'hanno-shinkin', 'shiba-shinkin'].includes(id)
+  ) return '信用金庫';
+  return '地銀';
+}
+
+function isCoopRequired(id: string): boolean {
+  return (
+    id.includes('shinkin') ||
+    id.includes('roukin') ||
+    ['johnan-shinkin', 'tamashin', 'yokoshin', 'saishin', 'kawaguchi-shinkin', 'hanno-shinkin', 'shiba-shinkin'].includes(id)
+  );
+}
+
+function getBreakevenColor(months: number): string {
+  if (months <= 24) return 'text-success-500';
+  if (months <= 48) return 'text-orange-400';
+  return 'text-danger-500';
+}
+
+function getBreakevenDot(months: number): string {
+  if (months <= 24) return '🟢';
+  if (months <= 48) return '🟡';
+  return '🔴';
+}
+
 function getScore(r: RefinanceResult): number {
   if (!r.isWorthwhile) return 1;
   const savingScore = r.totalSavingsAll > 5_000_000 ? 2 : r.totalSavingsAll > 2_000_000 ? 1 : 0;
@@ -169,6 +201,8 @@ export default function RefinancePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
+  const [bankSearchQuery, setBankSearchQuery] = useState('');
+  const [bankCategoryFilter, setBankCategoryFilter] = useState<string>('全て');
 
   const currentMonthJST = useMemo(() => {
     const now = new Date();
@@ -245,12 +279,17 @@ export default function RefinancePage() {
   const eligibleBanks = useMemo(() =>
     REFINANCE_BANKS_2026.filter(b => {
       const effectiveRate = refreshedRates[b.id] ?? b.rate;
+      const category = getBankCategory(b.id);
+      const matchesCategory = bankCategoryFilter === '全て' || category === bankCategoryFilter;
+      const matchesSearch = bankSearchQuery === '' || b.name.includes(bankSearchQuery);
       return (
         (rateTypeFilter === 'all' || b.rateType === rateTypeFilter) &&
-        (showAllBanks || effectiveRate < currentRate)
+        (showAllBanks || effectiveRate < currentRate) &&
+        matchesCategory &&
+        matchesSearch
       );
     }),
-    [showAllBanks, rateTypeFilter, currentRate, refreshedRates]
+    [showAllBanks, rateTypeFilter, currentRate, refreshedRates, bankCategoryFilter, bankSearchQuery]
   );
 
   const bankDataMap = useMemo(
@@ -537,6 +576,17 @@ export default function RefinancePage() {
             <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
               <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">🔍 絞り込み</h3>
               <div className="space-y-3">
+                {/* Bank name search */}
+                <div>
+                  <label className="text-xs font-medium text-neutral-700 block mb-1">銀行名検索</label>
+                  <input
+                    type="text"
+                    value={bankSearchQuery}
+                    onChange={e => setBankSearchQuery(e.target.value)}
+                    placeholder="例：住信SBI、楽天..."
+                    className="input-cell w-full text-xs"
+                  />
+                </div>
                 <div>
                   <label className="text-xs font-medium text-neutral-700 block mb-1">金利タイプ</label>
                   <div className="flex gap-1">
@@ -544,6 +594,18 @@ export default function RefinancePage() {
                       <button key={t} onClick={() => set({ rateTypeFilter: t })}
                         className={`flex-1 text-xs px-2 py-1.5 rounded border transition-colors ${rateTypeFilter === t ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'}`}>
                         {t === 'all' ? '全て' : t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Bank category filter */}
+                <div>
+                  <label className="text-xs font-medium text-neutral-700 block mb-1">銀行種別</label>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(['全て', 'ネット銀行', '都市銀行', '地銀', '信用金庫', '固定金利'] as const).map(cat => (
+                      <button key={cat} onClick={() => setBankCategoryFilter(cat)}
+                        className={`text-[10px] px-1.5 py-1.5 rounded border transition-colors leading-tight ${bankCategoryFilter === cat ? 'bg-navy-500 text-white border-navy-500' : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'}`}>
+                        {cat}
                       </button>
                     ))}
                   </div>
@@ -596,22 +658,23 @@ export default function RefinancePage() {
 
             {/* KPI cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
+              {/* Mobile: top 2 cards span full width each; desktop: all 4 equal */}
+              <div className="col-span-1 md:col-span-1 bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">現在の月返済額</p>
-                <p className="text-lg font-bold text-danger-500">{yenM(currentMonthly)}</p>
+                <p className="text-xl font-bold text-danger-500 leading-tight">{yenM(currentMonthly)}</p>
                 <p className="text-xs text-neutral-400">金利 {pct(currentRate)}</p>
               </div>
-              <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
+              <div className="col-span-1 md:col-span-1 bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">借換え後月返済</p>
-                <p className="text-lg font-bold text-success-500">{bestResult ? yenM(bestResult.newMonthly) : '—'}</p>
+                <p className="text-xl font-bold text-success-500 leading-tight">{bestResult ? yenM(bestResult.newMonthly) : '—'}</p>
                 <p className="text-xs text-neutral-400">{bestResult ? `月 ${yenM(bestResult.monthlySavings)} 削減` : ''}</p>
               </div>
-              <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
+              <div className="col-span-1 bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">最大総節約額</p>
                 <p className="text-lg font-bold text-navy-500">{bestResult ? yenM(bestResult.totalSavingsAll) : '—'}</p>
                 <p className="text-xs text-neutral-400">費用差引後</p>
               </div>
-              <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-3">
+              <div className="col-span-1 bg-white rounded-xl border border-neutral-100 shadow-card p-3">
                 <p className="text-xs text-neutral-500">最短損益分岐</p>
                 <p className="text-lg font-bold text-orange-500">
                   {bestResult
@@ -644,7 +707,7 @@ export default function RefinancePage() {
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 z-10">
                       <tr className="bg-neutral-50 border-b border-neutral-200">
-                        <th className="px-3 py-2 text-left font-semibold text-neutral-600">銀行名</th>
+                        <th className="px-3 py-2 text-left font-semibold text-neutral-600 min-w-[140px]">銀行名</th>
                         <th className="px-3 py-2 text-center font-semibold text-neutral-600">
                           借り換え金利
                           <div className="text-[9px] font-normal text-neutral-400">※新規とは異なる場合あり</div>
@@ -679,9 +742,12 @@ export default function RefinancePage() {
                                 <div className="flex items-center gap-1">
                                   {i === 0 && <span className="text-orange-500 font-bold text-[10px]">🏆</span>}
                                   <div>
-                                    <div className="font-medium text-navy-500 leading-tight">
+                                    <div className="font-medium text-navy-500 leading-tight flex items-center gap-1 flex-wrap">
                                       {bankData ? dansinIcon(bankData.dansin) : ''}{' '}
-                                      {r.bankName.slice(0, 18)}
+                                      <span className="whitespace-nowrap">{r.bankName}</span>
+                                      {isCoopRequired(r.bankId) && (
+                                        <span title="組合員条件あり" className="text-[9px] cursor-help">🏛️</span>
+                                      )}
                                     </div>
                                     <div className="text-neutral-400 text-[10px]">{r.rateType}</div>
                                   </div>
@@ -720,6 +786,14 @@ export default function RefinancePage() {
                               </td>
                               <td className="px-3 py-2">
                                 <StarRating score={getScore(r)} />
+                                {r.breakEvenMonths !== Infinity && (
+                                  <div
+                                    className={`text-[9px] text-center mt-0.5 font-medium ${getBreakevenColor(r.breakEvenMonths)}`}
+                                    title={`損益分岐${r.breakEvenMonths}ヶ月 / 🟢=24ヶ月以内 🟡=48ヶ月以内 🔴=48ヶ月超`}
+                                  >
+                                    {getBreakevenDot(r.breakEvenMonths)} {r.breakEvenMonths}m
+                                  </div>
+                                )}
                               </td>
                             </tr>
                             {isExpanded && bankData && (
@@ -770,7 +844,7 @@ export default function RefinancePage() {
               {/* 金利種別注記 */}
               {eligibleBanks.length > 0 && (
                 <p className="text-[10px] text-neutral-400 px-3 py-2 border-t border-neutral-100">
-                  ※表示金利は各行の<strong>借り換え専用融資実行金利</strong>です。新規住宅ローン金利とは異なる場合があります。auじぶん銀行の0.930%はau各種サービス契約による最大優遇適用後の金利（標準借り換え金利：1.125%）。
+                  ※表示金利は各行の<strong>借り換え専用融資実行金利（最優遇時）</strong>です。実際の適用金利は審査により異なります。🏛️は組合員条件あり。
                 </p>
               )}
             </div>
@@ -779,7 +853,7 @@ export default function RefinancePage() {
             {selectedResult && (
               <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
                 <h3 className="text-sm font-bold text-navy-500 mb-4">
-                  📊 詳細分析：{selectedResult.bankName.slice(0, 30)}
+                  📊 詳細分析：{selectedResult.bankName}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   {/* Cost breakdown */}
