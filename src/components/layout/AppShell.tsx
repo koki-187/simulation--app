@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               if (fallback) fallback.classList.remove('hidden');
             }}
           />
-          <span className="hidden font-bold text-sm">MAS - My Agent Simulation</span>
+          <span className="hidden font-bold text-sm">MAS - My Agent Simuration</span>
         </div>
         <ErrorBoundary>
           {children}

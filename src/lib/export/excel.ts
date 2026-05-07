@@ -10,7 +10,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
   const ExcelJS = (await import('exceljs')).default;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'MAS - My Agent Simulation';
+  wb.creator = 'MAS - My Agent Simuration';
   wb.created = new Date();
 
   const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
@@ -43,7 +43,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
 
   // ── Sheet 1: サマリー ──────────────────────────────────────────────────────
   const summaryData: RowData[] = [
-    ['MAS - My Agent Simulation — サマリー'],
+    ['MAS - My Agent Simuration — サマリー'],
     ['作成日', new Date().toLocaleDateString('ja-JP')],
     [],
     ['項目', 'パターンA', ...(hasB ? ['パターンB'] : [])],

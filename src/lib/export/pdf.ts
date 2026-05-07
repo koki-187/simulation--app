@@ -193,7 +193,7 @@ function buildSimHtml(resultA: SimResult, resultB: SimResult | null): string {
       </div>
       ${sec1}${sec2}${sec3}${sec4}${sec5}
       <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
-        MAS - My Agent Simulation ／ 本資料は試算値であり、投資助言ではありません。実際の数値は専門家にご相談ください。
+        MAS - My Agent Simuration ／ 本資料は試算値であり、投資助言ではありません。実際の数値は専門家にご相談ください。
       </div>
     </div>`;
 }

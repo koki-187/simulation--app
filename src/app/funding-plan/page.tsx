@@ -150,7 +150,7 @@ function buildFundingPlanHtml(data: FundingPlanData): string {
       ])}
 
       <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
-        MAS - My Agent Simulation ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
+        MAS - My Agent Simuration ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
       </div>
     </div>`;
 }

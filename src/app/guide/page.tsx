@@ -418,7 +418,7 @@ function FundingPlanMockup() {
       <rect x="316" y="182" width="16" height="48" rx="1" fill="#22C55E" opacity="0.6" />
       <rect x="340" y="174" width="16" height="56" rx="1" fill="#22C55E" opacity="0.7" />
       <text x="236" y="256" fill="#9CA3AF" fontSize="6" fontFamily="sans-serif">※ 本書は試算であり、保証するものではありません</text>
-      <text x="236" y="266" fill="#9CA3AF" fontSize="6" fontFamily="sans-serif">MAS - My Agent Simulation</text>
+      <text x="236" y="266" fill="#9CA3AF" fontSize="6" fontFamily="sans-serif">MAS - My Agent Simuration</text>
     </svg>
   );
 }

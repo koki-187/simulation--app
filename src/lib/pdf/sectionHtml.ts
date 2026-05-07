@@ -30,7 +30,7 @@ export function coverHtml(propertyName: string, patternLabel: string): string {
   return `
     <div style="padding:40px; min-height:500px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:white;">
       <div style="font-size:32px; font-weight:bold; color:${NAVY}; margin-bottom:8px;">MAS</div>
-      <div style="font-size:14px; color:#6B7280; margin-bottom:32px;">My Agent Simulation</div>
+      <div style="font-size:14px; color:#6B7280; margin-bottom:32px;">My Agent Simuration</div>
       <div style="font-size:22px; font-weight:bold; color:#111827; margin-bottom:16px;">${esc(propertyName)}</div>
       <div style="font-size:13px; color:#6B7280;">シミュレーションレポート${patternLabel ? ` — ${esc(patternLabel)}` : ''}</div>
       <div style="font-size:11px; color:#9CA3AF; margin-top:8px;">作成日: ${today}</div>
