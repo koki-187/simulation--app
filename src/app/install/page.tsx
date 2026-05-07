@@ -24,32 +24,32 @@ interface Step {
 
 const STEPS: Record<OS, Step[]> = {
   ios: [
-    { text: 'Safari で MAS のURL を開く' },
+    { text: 'Safari で TERASS のURL を開く' },
     { text: '画面下部の共有ボタン（□↑）をタップ' },
     { text: '「ホーム画面に追加」をタップ' },
     { text: '名前を確認して「追加」をタップ' },
-    { text: 'ホーム画面に MAS アイコンが追加されます' },
+    { text: 'ホーム画面に TERASS アイコンが追加されます' },
   ],
   android: [
-    { text: 'Chrome で MAS の URL を開く' },
+    { text: 'Chrome で TERASS の URL を開く' },
     { text: '右上のメニュー（⋮）をタップ' },
     { text: '「ホーム画面に追加」または「アプリをインストール」をタップ' },
     { text: '「インストール」をタップ' },
-    { text: 'ホーム画面またはアプリドロワーに MAS が追加されます' },
+    { text: 'ホーム画面またはアプリドロワーに TERASS が追加されます' },
   ],
   windows: [
-    { text: 'Chrome で MAS の URL を開く' },
+    { text: 'Chrome で TERASS の URL を開く' },
     { text: 'アドレスバー右端のインストールアイコン（⊕）をクリック' },
     { text: '「インストール」をクリック' },
-    { text: 'デスクトップとスタートメニューに MAS が追加されます', note: 'Edge でも URL バー右端の「+」アイコンから同様にインストール可能' },
+    { text: 'デスクトップとスタートメニューに TERASS が追加されます', note: 'Edge でも URL バー右端の「+」アイコンから同様にインストール可能' },
   ],
   mac: [
-    { text: 'Chrome で MAS の URL を開く' },
+    { text: 'Chrome で TERASS の URL を開く' },
     { text: 'アドレスバー右端のインストールアイコン（⊕）をクリック' },
     { text: '「インストール」をクリック' },
-    { text: 'Launchpad と Dock に MAS が追加されます' },
+    { text: 'Launchpad と Dock に TERASS が追加されます' },
     { text: 'Safari (macOS 14 Sonoma以降): Safariを開き、メニューバーの「ファイル」→「Dockに追加」をクリック', note: 'macOS 14 Sonoma以降のSafariで利用可能' },
-    { text: '「Dockに追加」ダイアログで名前を確認し「追加」をクリック。LaunchpadにMASが表示されます' },
+    { text: '「Dockに追加」ダイアログで名前を確認し「追加」をクリック。LaunchpadにTERASSが表示されます' },
   ],
 };
 
@@ -79,7 +79,7 @@ export default function InstallPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-[#1C2B4A] flex items-center gap-2">
             <span>📲</span>
-            <span>MAS をインストール</span>
+            <span>TERASS をインストール</span>
           </h1>
           <p className="mt-2 text-[#4A5B7A] text-sm leading-relaxed">
             アプリとして使うとオフラインでも利用でき、ホーム画面から素早くアクセスできます

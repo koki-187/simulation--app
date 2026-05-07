@@ -10,7 +10,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
   const ExcelJS = (await import('exceljs')).default;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'MAS - My Agent Simulation';
+  wb.creator = 'TERASS 不動産投資シミュレーター';
   wb.created = new Date();
 
   const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
@@ -43,7 +43,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
 
   // ── Sheet 1: サマリー ──────────────────────────────────────────────────────
   const summaryData: RowData[] = [
-    ['MAS - My Agent Simulation — サマリー'],
+    ['TERASS 不動産投資シミュレーター — サマリー'],
     ['作成日', new Date().toLocaleDateString('ja-JP')],
     [],
     ['項目', 'パターンA', ...(hasB ? ['パターンB'] : [])],
@@ -159,7 +159,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `MAS_投資シミュレーション_${dateStr}.xlsx`;
+  a.download = `TERASS_投資シミュレーション_${dateStr}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }

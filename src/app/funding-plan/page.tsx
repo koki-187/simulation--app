@@ -92,7 +92,7 @@ function buildFundingPlanHtml(data: FundingPlanData): string {
           <div style="font-size:15px;font-weight:700;letter-spacing:0.05em;">資金計画書</div>
           <div style="font-size:11px;margin-top:2px;opacity:0.85;">${data.propertyName || '（物件名未入力）'}</div>
         </div>
-        <div style="font-size:9px;opacity:0.7;text-align:right;">作成日: ${data.createdDate}<br>担当: ${data.agentName || 'MAS'}</div>
+        <div style="font-size:9px;opacity:0.7;text-align:right;">作成日: ${data.createdDate}<br>担当: ${data.agentName || 'TERASS'}</div>
       </div>
 
       ${sectionHd('１．物件情報')}
@@ -146,11 +146,11 @@ function buildFundingPlanHtml(data: FundingPlanData): string {
         ['年収（源泉）', fmtM(data.annualIncome)],
         ['勤務先', data.employer || '―'],
         ['勤続年数', String(data.yearsEmployed) + '年'],
-        ['担当エージェント', data.agentName || 'MAS'],
+        ['担当エージェント', data.agentName || 'TERASS'],
       ])}
 
       <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
-        MAS - My Agent Simulation ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
+        TERASS 不動産投資シミュレーター ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
       </div>
     </div>`;
 }
@@ -159,7 +159,7 @@ async function exportFundingPlanPDF(data: FundingPlanData): Promise<void> {
   const { elementToPdf } = await import('@/lib/pdf/jpdf');
   await elementToPdf({
     html: buildFundingPlanHtml(data),
-    filename: 'MAS_資金計画書_' + (data.propertyName || '物件') + '_' + data.createdDate + '.pdf',
+    filename: 'TERASS_資金計画書_' + (data.propertyName || '物件') + '_' + data.createdDate + '.pdf',
     orientation: 'portrait',
   });
 }
@@ -207,7 +207,7 @@ export default function FundingPlanPage() {
   const [annualIncome, setAnnualIncome] = useState<number>(800);
   const [employer, setEmployer] = useState('');
   const [yearsEmployed, setYearsEmployed] = useState<number>(5);
-  const [agentName, setAgentName] = useState('MAS');
+  const [agentName, setAgentName] = useState('TERASS');
   const [createdDate, setCreatedDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // ── Derived calculations ───────────────────────────────────────────────
@@ -675,7 +675,7 @@ export default function FundingPlanPage() {
                 <div className="bg-navy-500 text-white px-5 py-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xl font-bold tracking-wider">MAS</p>
+                      <p className="text-xl font-bold tracking-wider">TERASS</p>
                       <p className="text-xs text-navy-100 mt-0.5">不動産投資 資金計画書</p>
                     </div>
                     <div className="text-right text-xs text-navy-100">
@@ -827,7 +827,7 @@ export default function FundingPlanPage() {
 
               {/* Disclaimer */}
               <p className="text-xs text-neutral-400 text-center leading-relaxed">
-                本資料はMASが作成した参考情報です。
+                本資料はTERASSが作成した参考情報です。
                 <br />
                 実際の融資条件は金融機関にご確認ください。
               </p>

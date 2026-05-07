@@ -1,7 +1,7 @@
 {
-  "name": "MAS - My Agent Simulation",
-  "short_name": "MAS",
-  "description": "不動産投資・住宅ローンシミュレーター",
+  "name": "TERASS 不動産投資シミュレーター",
+  "short_name": "TERASS",
+  "description": "プロ仕様の不動産投資シミュレーションツール — キャッシュフロー・売却・税金を一括計算",
   "id": "/",
   "start_url": "/",
   "scope": "/",

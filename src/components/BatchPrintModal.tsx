@@ -150,7 +150,7 @@ export function BatchPrintModal({ open, onClose }: BatchPrintModalProps) {
       const { batchExportPdf } = await import('@/lib/pdf/batchExport');
       const sections = buildSections();
       const dateStr = new Date().toLocaleDateString('ja-JP').replace(/\//g, '');
-      const filename = `MAS_${resultA.input.propertyName}_${dateStr}.pdf`;
+      const filename = `TERASS_${resultA.input.propertyName}_${dateStr}.pdf`;
       await batchExportPdf(sections, filename, (done, total, label) => {
         setProgress({ done, total, label });
       });

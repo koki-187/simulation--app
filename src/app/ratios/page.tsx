@@ -106,7 +106,7 @@ export default function RatiosPage() {
       const htmlB = isCompare ? buildPdfHtml('B', resultB.ratios, dcfB) : '';
       await elementToPdf({
         html: htmlA + htmlB,
-        filename: `MAS_DCF_${resultA.input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`,
+        filename: `TERASS_DCF_${resultA.input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.pdf`,
       });
     } catch (e) {
       console.error('PDF出力エラー:', e);

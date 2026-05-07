@@ -12,15 +12,15 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: 'MAS - My Agent Simulation',
-  description: '不動産投資・住宅ローン返済・借り換え・繰上げ返済シミュレーター。キャッシュフロー分析、売却シナリオ、税務明細まで網羅。',
-  keywords: ['不動産投資', '住宅ローン', 'シミュレーター', 'キャッシュフロー', '借り換え', '繰上げ返済', 'MAS'],
+  title: 'TERASS 不動産投資シミュレーター',
+  description: 'プロ仕様の不動産投資シミュレーションツール — キャッシュフロー・売却・税金を一括計算。住宅ローン・借り換え・繰上げ返済にも対応。',
+  keywords: ['不動産投資', '住宅ローン', 'シミュレーター', 'キャッシュフロー', '借り換え', '繰上げ返済', 'TERASS'],
   openGraph: {
-    title: 'MAS - My Agent Simulation',
-    description: '不動産投資・住宅ローンシミュレーター',
+    title: 'TERASS 不動産投資シミュレーター',
+    description: 'プロ仕様の不動産投資シミュレーションツール — キャッシュフロー・売却・税金を一括計算',
     type: 'website',
     locale: 'ja_JP',
-    images: [{ url: '/mas-ogp.png', width: 1200, height: 400, alt: 'MAS - My Agent Simulation' }],
+    images: [{ url: '/mas-ogp.png', width: 1200, height: 400, alt: 'TERASS 不動産投資シミュレーター' }],
   },
   manifest: '/manifest.json',
   icons: {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'MAS',
+    title: 'TERASS',
   },
 };
 

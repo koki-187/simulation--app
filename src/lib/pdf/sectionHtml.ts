@@ -29,8 +29,8 @@ export function coverHtml(propertyName: string, patternLabel: string): string {
   const today = new Date().toLocaleDateString('ja-JP');
   return `
     <div style="padding:40px; min-height:500px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:white;">
-      <div style="font-size:32px; font-weight:bold; color:${NAVY}; margin-bottom:8px;">MAS</div>
-      <div style="font-size:14px; color:#6B7280; margin-bottom:32px;">My Agent Simulation</div>
+      <div style="font-size:32px; font-weight:bold; color:${NAVY}; margin-bottom:8px;">TERASS</div>
+      <div style="font-size:14px; color:#6B7280; margin-bottom:32px;">不動産投資シミュレーター</div>
       <div style="font-size:22px; font-weight:bold; color:#111827; margin-bottom:16px;">${esc(propertyName)}</div>
       <div style="font-size:13px; color:#6B7280;">シミュレーションレポート${patternLabel ? ` — ${esc(patternLabel)}` : ''}</div>
       <div style="font-size:11px; color:#9CA3AF; margin-top:8px;">作成日: ${today}</div>
@@ -84,7 +84,7 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
       </div>
     </div>
   `;
@@ -141,7 +141,7 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
       </div>
     </div>
   `;
@@ -187,7 +187,7 @@ export function saleSectionHtml(result: SimResult, patternLabel: string): string
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
       </div>
     </div>
   `;
@@ -257,7 +257,7 @@ export function taxSectionHtml(result: SimResult, patternLabel: string): string 
       </table>
 
       <div style="margin-top:16px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
       </div>
     </div>
   `;
@@ -292,7 +292,7 @@ export function ratiosSectionHtml(result: SimResult, patternLabel: string): stri
         </tbody>
       </table>
       <div style="margin-top:16px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
       </div>
     </div>
   `;
@@ -351,7 +351,7 @@ export function fundingPlanSectionHtml(result: SimResult, patternLabel: string):
         </tbody>
       </table>
       <div style="margin-top:16px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
       </div>
     </div>
   `;

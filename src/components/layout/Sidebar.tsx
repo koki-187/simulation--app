@@ -56,7 +56,7 @@ export const Sidebar = memo(function Sidebar({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/mas-logo-horizontal.png"
-          alt="MAS - My Agent Simulation"
+          alt="TERASS 不動産投資シミュレーター"
           className="h-10 w-auto object-contain max-w-full"
           onError={(e) => {
             const el = e.currentTarget as HTMLImageElement;
@@ -67,8 +67,8 @@ export const Sidebar = memo(function Sidebar({
         />
         {/* Fallback text (hidden when logo loads) */}
         <div className="hidden">
-          <div className="text-white font-bold text-xl tracking-widest leading-tight">MAS</div>
-          <div className="text-navy-100 text-xs mt-0.5">My Agent Simulation</div>
+          <div className="text-white font-bold text-xl tracking-widest leading-tight">TERASS</div>
+          <div className="text-navy-100 text-xs mt-0.5">不動産投資シミュレーター</div>
         </div>
       </div>
 
