@@ -5,8 +5,16 @@
 export interface RefinanceBank2026 {
   id: string;
   name: string;
-  /** 変動金利 % (最優遇、適用条件は notes 参照) */
+  /**
+   * 借り換え専用融資実行金利 % (最優遇、適用条件は notes 参照)
+   * ※新規住宅ローン金利とは異なる場合あり（newLoanRate 参照）
+   */
   rate: number;
+  /**
+   * 同行の新規住宅ローン金利 % (借り換え金利と異なる場合のみ設定)
+   * 例: 三菱UFJ は新規 0.945% に対し借り換えは 0.995%（+0.05%）
+   */
+  newLoanRate?: number;
   rateType: '変動' | '固定10年' | '固定35年';
   /** percent → 借入額 × processingFeeValue; flat → processingFeeValue 円 */
   processingFeeType: 'percent' | 'flat';
@@ -94,7 +102,7 @@ export const REFINANCE_BANKS_2026: RefinanceBank2026[] = [
     maxLTV: 0.8,
     minAnnualIncome: 2_000_000,
     maxBorrowerAge: 65,
-    notes: 'au/UQモバイル・電気・インターネット契約で最大-0.195%優遇適用済み。借り換え・一般団信の場合は1.125%（au割引なし）。LTV≤80%条件あり。がん100%保障団信が無料。一部・全額繰上は変動金利期間中無料。金利見直し：4月・10月（半年ごと）。',
+    notes: '【重要】0.930%はau/UQモバイル・電気・インターネット契約セット割引（最大-0.195%）を全て適用した場合の金利。割引なしの借り換え標準金利は1.125%。LTV≤80%条件あり。がん100%保障団信が無料。一部・全額繰上は変動金利期間中無料。金利見直し：4月・10月（半年ごと）。',
     dansin: 'がん100%無料',
     applyDays: 21,
     has5YearRule: true,
@@ -129,6 +137,7 @@ export const REFINANCE_BANKS_2026: RefinanceBank2026[] = [
     id: 'mufg',
     name: '三菱UFJ銀行（WEB型）',
     rate: 0.995,
+    newLoanRate: 0.945,
     rateType: '変動',
     processingFeeType: 'percent',
     processingFeeValue: 0.022,
@@ -138,7 +147,7 @@ export const REFINANCE_BANKS_2026: RefinanceBank2026[] = [
     maxLTV: 1.0,
     minAnnualIncome: 0,
     maxBorrowerAge: 70,
-    notes: 'WEB申込型・保証料不要。借り換えは新規より+0.05%（新規0.945%）。事務手数料2.2%。5年ルール・1.25倍ルールあり（元利均等の場合）。一部繰上：ネット無料。全額繰上：ネット16,500円・窓口33,000円。金利見直し：4月・10月（半年ごと）。',
+    notes: 'WEB申込型・保証料不要。【注意】借り換えは新規より+0.05%（新規：0.945% → 借り換え：0.995%）。事務手数料2.2%。5年ルール・1.25倍ルールあり（元利均等の場合）。一部繰上：ネット無料。全額繰上：ネット16,500円・窓口33,000円。金利見直し：4月・10月（半年ごと）。',
     dansin: '一般団信',
     applyDays: 45,
     has5YearRule: true,

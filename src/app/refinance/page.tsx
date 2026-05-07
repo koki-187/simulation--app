@@ -645,7 +645,10 @@ export default function RefinancePage() {
                     <thead className="sticky top-0 z-10">
                       <tr className="bg-neutral-50 border-b border-neutral-200">
                         <th className="px-3 py-2 text-left font-semibold text-neutral-600">銀行名</th>
-                        <th className="px-3 py-2 text-center font-semibold text-neutral-600">金利</th>
+                        <th className="px-3 py-2 text-center font-semibold text-neutral-600">
+                          借り換え金利
+                          <div className="text-[9px] font-normal text-neutral-400">※新規とは異なる場合あり</div>
+                        </th>
                         <th className="px-3 py-2 text-right font-semibold text-neutral-600">月削減額</th>
                         <th className="px-3 py-2 text-right font-semibold text-neutral-600">事務手数料</th>
                         <th className="px-3 py-2 text-center font-semibold text-neutral-600">損益分岐</th>
@@ -688,6 +691,11 @@ export default function RefinancePage() {
                               <td className="px-3 py-2 text-center">
                                 <span className="font-bold text-success-500">{pct(r.newRate)}</span>
                                 <div className="text-[10px] text-danger-500">▼{(currentRate - r.newRate).toFixed(3)}%</div>
+                                {bankData?.newLoanRate != null && (
+                                  <div className="text-[9px] text-orange-500 mt-0.5" title="同行の新規住宅ローン金利との差">
+                                    新規比+{(r.newRate - bankData.newLoanRate).toFixed(3)}%
+                                  </div>
+                                )}
                               </td>
                               <td className="px-3 py-2 text-right font-bold text-success-500">{yenM(r.monthlySavings)}</td>
                               <td className="px-3 py-2 text-right text-neutral-600">{yenM(r.processingFee)}</td>
@@ -744,6 +752,11 @@ export default function RefinancePage() {
                                     <span>審査目安: 約{bankData.applyDays}日</span>
                                     <span>団信: {bankData.dansin}</span>
                                   </div>
+                                  {bankData.newLoanRate != null && (
+                                    <div className="mt-2 text-[10px] bg-orange-50 border border-orange-200 rounded px-2 py-1 text-orange-700">
+                                      ⚠️ 金利差注意：新規住宅ローン {pct(bankData.newLoanRate)} に対し、借り換えは {pct(r.newRate)}（+{(r.newRate - bankData.newLoanRate).toFixed(3)}%）
+                                    </div>
+                                  )}
                                 </td>
                               </tr>
                             )}
@@ -753,6 +766,12 @@ export default function RefinancePage() {
                     </tbody>
                   </table>
                 </div>
+              )}
+              {/* 金利種別注記 */}
+              {eligibleBanks.length > 0 && (
+                <p className="text-[10px] text-neutral-400 px-3 py-2 border-t border-neutral-100">
+                  ※表示金利は各行の<strong>借り換え専用融資実行金利</strong>です。新規住宅ローン金利とは異なる場合があります。auじぶん銀行の0.930%はau各種サービス契約による最大優遇適用後の金利（標準借り換え金利：1.125%）。
+                </p>
               )}
             </div>
 
