@@ -70,7 +70,7 @@ function buildTaxHtml(t: TaxDetail, patternLabel: string): string {
       </table>
 
       <div style="margin-top:16px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
@@ -95,7 +95,7 @@ async function exportTaxPDF(
 
   await elementToPdf({
     html,
-    filename: `TERASS_税金詳細_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_税金詳細_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }

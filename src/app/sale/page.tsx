@@ -181,7 +181,7 @@ function buildSaleHtml(
       </table>
       <div style="margin-top:10px;font-size:8px;color:#6B7280;line-height:1.6;">
         ★ = 入力フォームの保有年数 ／ 短期 = 5年以下（税率39.63%）／ 長期 = 5年超（税率20.315%）<br>
-        ※本シミュレーションは概算です。税務・法律事項は専門家にご相談ください。 | TERASS
+        ※本シミュレーションは概算です。税務・法律事項は専門家にご相談ください。 | MAS
       </div>
     </div>`;
 }
@@ -208,7 +208,7 @@ async function exportSalePDF(
 
   await elementToPdf({
     html,
-    filename: `TERASS_売却シミュレーション_${propName}_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_売却シミュレーション_${propName}_${today.replace(/\//g, '')}.pdf`,
     orientation: 'landscape',
   });
 }

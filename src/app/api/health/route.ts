@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   return Response.json({
     status: 'ok',
-    service: 'TERASS 不動産投資シミュレーター',
+    service: 'MAS - My Agent Simulation',
     timestamp: new Date().toISOString(),
   });
 }

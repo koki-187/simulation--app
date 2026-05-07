@@ -196,7 +196,7 @@ function buildLoanCompareHtml(params: PDFParams): string {
       </table>
 
       <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
-        TERASS 不動産投資シミュレーター ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
+        MAS - My Agent Simulation ／ 本資料は参考情報です。実際の融資条件は金融機関にご確認ください。
       </div>
     </div>`;
 }
@@ -206,7 +206,7 @@ async function exportLoanComparePDF(params: PDFParams): Promise<void> {
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
   await elementToPdf({
     html: buildLoanCompareHtml(params),
-    filename: 'TERASS_金融機関比較_' + today.replace(/\//g, '') + '.pdf',
+    filename: 'MAS_金融機関比較_' + today.replace(/\//g, '') + '.pdf',
     orientation: 'portrait',
   });
 }

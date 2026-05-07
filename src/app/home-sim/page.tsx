@@ -533,7 +533,7 @@ export default function HomeSimPage() {
         </table>
         ${deductionSection}
         <div style="margin-top:16px;font-size:9px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:8px;">
-          ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
+          ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
         </div>
       </div>
     `;
@@ -541,7 +541,7 @@ export default function HomeSimPage() {
     const nameSlug = propertyName ? `_${propertyName}` : '';
     await elementToPdf({
       html,
-      filename: `TERASS_住宅ローン${nameSlug}_${today.replace(/\//g, '')}.pdf`,
+      filename: `MAS_住宅ローン${nameSlug}_${today.replace(/\//g, '')}.pdf`,
       orientation: 'portrait',
     });
   }

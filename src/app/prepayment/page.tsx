@@ -257,14 +257,14 @@ async function exportPrepaymentPDF(params: {
       </table>
 
       <div style="margin-top:16px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
 
   await elementToPdf({
     html,
-    filename: `TERASS_繰上げ返済シミュレーション_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_繰上げ返済シミュレーション_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }

@@ -85,7 +85,7 @@ export function InstallBanner() {
           <span className="text-2xl shrink-0 mt-0.5">📲</span>
           <div className="flex-1 min-w-0">
             <p className="text-white font-semibold text-sm leading-tight">
-              TERASS をアプリとしてインストール
+              MAS をアプリとしてインストール
             </p>
             {isIOS ? (
               <p className="text-[#93A8CC] text-xs mt-1 leading-relaxed">

@@ -50,7 +50,7 @@ function buildCashflowHtml(rows: CFRow[], input: SimInput, patternLabel: string)
         <tbody>${tableRows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | TERASS
+        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
       </div>
     </div>
   `;
@@ -75,7 +75,7 @@ async function exportCashflowPDF(
 
   await elementToPdf({
     html,
-    filename: `TERASS_CF_${resultA.input.propertyName}_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_CF_${resultA.input.propertyName}_${today.replace(/\//g, '')}.pdf`,
     orientation: 'landscape',
   });
 }
@@ -95,7 +95,7 @@ function exportCashflowCSV(rows: CFRow[], input: SimInput) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `TERASS_CF_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.csv`;
+  a.download = `MAS_CF_${input.propertyName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'')}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

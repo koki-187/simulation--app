@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/mas-logo-horizontal.png"
-            alt="TERASS"
+            alt="MAS"
             className="h-7 w-auto object-contain"
             onError={(e) => {
               const el = e.currentTarget as HTMLImageElement;
@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               if (fallback) fallback.classList.remove('hidden');
             }}
           />
-          <span className="hidden font-bold text-sm">TERASS 不動産投資シミュレーター</span>
+          <span className="hidden font-bold text-sm">MAS - My Agent Simulation</span>
         </div>
         <ErrorBoundary>
           {children}

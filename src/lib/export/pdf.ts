@@ -186,14 +186,14 @@ function buildSimHtml(resultA: SimResult, resultB: SimResult | null): string {
       <!-- ヘッダー -->
       <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;">
         <div>
-          <div style="font-size:15px;font-weight:700;letter-spacing:0.05em;">TERASS 不動産投資シミュレーション報告書</div>
+          <div style="font-size:15px;font-weight:700;letter-spacing:0.05em;">MAS 不動産投資シミュレーション報告書</div>
           <div style="font-size:10px;margin-top:3px;opacity:0.8;">作成日: ${today}</div>
         </div>
         <div style="font-size:8px;opacity:0.7;text-align:right;">本資料は試算値であり、投資助言ではありません。</div>
       </div>
       ${sec1}${sec2}${sec3}${sec4}${sec5}
       <div style="margin-top:12px;font-size:8px;color:#6B7280;border-top:1px solid #E5E7EB;padding-top:6px;">
-        TERASS 不動産投資シミュレーター ／ 本資料は試算値であり、投資助言ではありません。実際の数値は専門家にご相談ください。
+        MAS - My Agent Simulation ／ 本資料は試算値であり、投資助言ではありません。実際の数値は専門家にご相談ください。
       </div>
     </div>`;
 }
@@ -206,7 +206,7 @@ export async function exportPDF(resultA: SimResult, resultB: SimResult | null) {
   const propName = resultA.input.propertyName || '報告書';
   await elementToPdf({
     html: buildSimHtml(resultA, resultB),
-    filename: `TERASS_不動産投資シミュレーション_${propName}_${today.replace(/\//g, '')}.pdf`,
+    filename: `MAS_不動産投資シミュレーション_${propName}_${today.replace(/\//g, '')}.pdf`,
     orientation: 'portrait',
   });
 }
