@@ -78,7 +78,7 @@ export function calcSaleScenarios(
     const salePrice = Math.floor(baseSale * s.multiplier);
     const sellingCosts = Math.floor(salePrice * 0.03);
     const preTaxProfit = salePrice - loanBalance - sellingCosts;
-    const { taxableGain, taxRate, tax } = calcCapitalGainsTax(
+    const { taxableGain, tax } = calcCapitalGainsTax(
       salePrice, propertyPrice, accumulatedDep, sellingCosts, holdingYears
     );
     const afterTaxProfit = preTaxProfit - tax;

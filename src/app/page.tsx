@@ -5,7 +5,7 @@ import { AppShell } from '@/components/layout';
 import { StatBox, ExportBar } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
-import { yen, pct, yenM, cagr, mult } from '@/lib/format';
+import { yen, pct, cagr, mult } from '@/lib/format';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 export default function Dashboard() {

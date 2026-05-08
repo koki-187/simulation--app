@@ -87,7 +87,7 @@ self.addEventListener('fetch', (event) => {
             trimCache(DYNAMIC_CACHE, MAX_DYNAMIC_ENTRIES);
           }
           return networkResponse;
-        } catch (err) {
+        } catch {
           const cached = await caches.match(request);
           if (cached) return cached;
           const offline = await caches.match('/offline.html');
@@ -112,7 +112,7 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, networkResponse.clone());
           }
           return networkResponse;
-        } catch (err) {
+        } catch {
           return new Response('', { status: 504, statusText: 'Gateway Timeout' });
         }
       })()
@@ -131,7 +131,7 @@ self.addEventListener('fetch', (event) => {
           trimCache(DYNAMIC_CACHE, MAX_DYNAMIC_ENTRIES);
         }
         return networkResponse;
-      } catch (err) {
+      } catch {
         const cached = await caches.match(request);
         if (cached) return cached;
         return new Response('', { status: 504, statusText: 'Gateway Timeout' });
@@ -141,10 +141,10 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Push notification support (placeholder)
-self.addEventListener('push', (event) => {
+self.addEventListener('push', () => {
   // Intentionally empty - extend as needed
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', () => {
   // Intentionally empty - extend as needed
 });

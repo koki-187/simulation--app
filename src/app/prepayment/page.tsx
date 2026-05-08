@@ -204,7 +204,6 @@ async function exportPrepaymentPDF(params: {
   events: PrepaymentEvent[];
 }) {
   const { elementToPdf } = await import('@/lib/pdf/jpdf');
-  const fmt = (n: number) => Math.round(n).toLocaleString('ja-JP') + '円';
   const fmtMan = (n: number) => (n / 10000).toFixed(1) + '万円';
   const today = new Date().toLocaleDateString('ja-JP');
 

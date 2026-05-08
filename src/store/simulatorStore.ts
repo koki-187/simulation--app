@@ -18,7 +18,7 @@ interface SimStore {
 
 export const useSimStore = create<SimStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       inputA: DEFAULT_INPUT_A,
       inputB: DEFAULT_INPUT_B,
       resultA: simulate(DEFAULT_INPUT_A),

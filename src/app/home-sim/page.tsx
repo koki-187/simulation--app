@@ -314,7 +314,6 @@ export default function HomeSimPage() {
   const deductionRows = useMemo(() => {
     if (!deductionEnabled) return [];
     const loanPrincipal = loanAmount * 10000;
-    const r = annualRate / 100 / 12;
     const totalMonths = termYears * 12;
 
     const rows = [];
@@ -348,7 +347,6 @@ export default function HomeSimPage() {
   }, [
     deductionEnabled,
     loanAmount,
-    annualRate,
     termYears,
     baseResult,
     isNew,

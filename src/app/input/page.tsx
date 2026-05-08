@@ -1,31 +1,8 @@
 'use client';
-import { useState } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { Section, NumInput } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
 import { DEFAULT_INPUT_A, DEFAULT_INPUT_B } from '@/lib/calc/simulate';
-
-function Tip({ text }: { text: string }) {
-  const [show, setShow] = useState(false);
-  return (
-    <span className="relative inline-flex">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onFocus={() => setShow(true)}
-        onBlur={() => setShow(false)}
-        className="w-4 h-4 rounded-full bg-neutral-200 text-neutral-500 text-xs font-bold flex items-center justify-center hover:bg-orange-100 hover:text-orange-500 transition-colors cursor-help"
-        aria-label="説明"
-      >?</button>
-      {show && (
-        <span className="absolute left-6 top-0 z-50 w-56 bg-navy-500 text-white text-xs rounded-lg px-3 py-2 shadow-lg leading-relaxed pointer-events-none">
-          {text}
-        </span>
-      )}
-    </span>
-  );
-}
 
 function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
   const { inputA, inputB, resultA, resultB, setInputA, setInputB } = useSimStore();
@@ -134,7 +111,7 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
 }
 
 export default function InputPage() {
-  const { activePattern, setActivePattern } = useSimStore();
+  const { activePattern } = useSimStore();
   return (
     <AppShell>
       <div className="bg-navy-500 text-white px-6 py-4 flex items-center justify-between">

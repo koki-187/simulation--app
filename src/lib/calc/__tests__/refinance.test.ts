@@ -140,9 +140,7 @@ describe("calcRefinance – 通常ケース (3000万・1.5%・30年→0.95%)", (
     otherFees: 0,
   });
   const bank = makeBank(0.95, 330_000); // 事務手数料33万
-  let result: ReturnType<typeof calcRefinance>;
-
-  result = calcRefinance(input, bank);
+  const result = calcRefinance(input, bank);
 
   it("monthlySavings が正値になる", () => {
     expect(result.monthlySavings).toBeGreaterThan(0);

@@ -3,7 +3,7 @@ import { AppShell, PatternToggle } from '@/components/layout';
 import { StatBox } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
-import { yen, pct, num } from '@/lib/format';
+import { yen, pct } from '@/lib/format';
 import { elementToPdf } from '@/lib/pdf/jpdf';
 
 // ── DCF helpers ──────────────────────────────────────────────────────────────
@@ -62,6 +62,60 @@ function buildPdfHtml(
   `;
 }
 
+// ── DCF table component ───────────────────────────────────────────────────────
+
+type DCFData = {
+  npv3: number;
+  npv5: number;
+  npv7: number;
+  irr: number | null;
+  multiple: number;
+  equity: number;
+};
+
+function DCFTable({ d, label }: { d: DCFData; label?: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-5">
+      {label && <div className="text-xs font-bold text-gold-600 mb-3">{label}</div>}
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-100">
+            <th className="text-left py-2 text-xs font-semibold text-neutral-500">指標</th>
+            <th className="text-right py-2 text-xs font-semibold text-neutral-500">値</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            { label: 'NPV（割引率3%）', value: Math.round(d.npv3), isYen: true },
+            { label: 'NPV（割引率5%）', value: Math.round(d.npv5), isYen: true },
+            { label: 'NPV（割引率7%）', value: Math.round(d.npv7), isYen: true },
+          ].map(({ label, value, isYen }) => (
+            <tr key={label} className="border-b border-neutral-50">
+              <td className="py-2 text-neutral-700">{label}</td>
+              <td className={`py-2 text-right font-mono font-semibold ${value > 0 ? 'text-success-600' : value < 0 ? 'text-danger-500' : 'text-neutral-600'}`}>
+                {isYen ? yen(value) : value}
+              </td>
+            </tr>
+          ))}
+          <tr className="border-b border-neutral-50">
+            <td className="py-2 text-neutral-700">IRR（レバレッジ後 自己資本IRR）</td>
+            <td className={`py-2 text-right font-mono font-semibold ${d.irr !== null && d.irr > 0 ? 'text-success-600' : 'text-danger-500'}`}>
+              {d.irr !== null ? pct(d.irr) : 'N/A'}
+            </td>
+          </tr>
+          <tr>
+            <td className="py-2 text-neutral-700">投資倍率</td>
+            <td className={`py-2 text-right font-mono font-semibold ${d.multiple >= 1 ? 'text-success-600' : 'text-danger-500'}`}>
+              {d.multiple.toFixed(2)}x
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="mt-3 text-xs text-neutral-400">NPV・IRRは自己資本（頭金）に対する計算。割引率は投資家の期待収益率を想定。</p>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RatiosPage() {
@@ -70,9 +124,6 @@ export default function RatiosPage() {
   );
   const result = activePattern === 'B' ? resultB : resultA;
   const r = result.ratios;
-
-  const getRatioStatus = (ratio: number, goodMax: number, warnMax: number) =>
-    ratio <= goodMax ? 'positive' : ratio <= warnMax ? false : 'negative';
 
   // Build DCF inputs for one result
   function buildDCF(res: typeof resultA) {
@@ -113,47 +164,6 @@ export default function RatiosPage() {
       alert('PDF出力でエラーが発生しました。');
     }
   };
-
-  const DCFTable = ({ d, label }: { d: ReturnType<typeof buildDCF>; label?: string }) => (
-    <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-5">
-      {label && <div className="text-xs font-bold text-gold-600 mb-3">{label}</div>}
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-neutral-100">
-            <th className="text-left py-2 text-xs font-semibold text-neutral-500">指標</th>
-            <th className="text-right py-2 text-xs font-semibold text-neutral-500">値</th>
-          </tr>
-        </thead>
-        <tbody>
-          {[
-            { label: 'NPV（割引率3%）', value: Math.round(d.npv3), isYen: true },
-            { label: 'NPV（割引率5%）', value: Math.round(d.npv5), isYen: true },
-            { label: 'NPV（割引率7%）', value: Math.round(d.npv7), isYen: true },
-          ].map(({ label, value, isYen }) => (
-            <tr key={label} className="border-b border-neutral-50">
-              <td className="py-2 text-neutral-700">{label}</td>
-              <td className={`py-2 text-right font-mono font-semibold ${value > 0 ? 'text-success-600' : value < 0 ? 'text-danger-500' : 'text-neutral-600'}`}>
-                {isYen ? yen(value) : value}
-              </td>
-            </tr>
-          ))}
-          <tr className="border-b border-neutral-50">
-            <td className="py-2 text-neutral-700">IRR（レバレッジ後 自己資本IRR）</td>
-            <td className={`py-2 text-right font-mono font-semibold ${d.irr !== null && d.irr > 0 ? 'text-success-600' : 'text-danger-500'}`}>
-              {d.irr !== null ? pct(d.irr) : 'N/A'}
-            </td>
-          </tr>
-          <tr>
-            <td className="py-2 text-neutral-700">投資倍率</td>
-            <td className={`py-2 text-right font-mono font-semibold ${d.multiple >= 1 ? 'text-success-600' : 'text-danger-500'}`}>
-              {d.multiple.toFixed(2)}x
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p className="mt-3 text-xs text-neutral-400">NPV・IRRは自己資本（頭金）に対する計算。割引率は投資家の期待収益率を想定。</p>
-    </div>
-  );
 
   return (
     <AppShell>
