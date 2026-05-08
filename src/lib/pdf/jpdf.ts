@@ -85,10 +85,10 @@ export async function elementToPdf(options: {
         0, 0, canvas.width, sliceH
       );
 
-      const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+      const sliceData = sliceCanvas.toDataURL('image/png');
       // sliceHが1ページ未満の場合、縦幅を比例縮小
       const imgH = contentH * (sliceH / pageHeightPx);
-      doc.addImage(sliceData, 'JPEG', margin[3], margin[0], contentW, imgH);
+      doc.addImage(sliceData, 'PNG', margin[3], margin[0], contentW, imgH);
 
       offsetY += pageHeightPx;
       pageNum++;

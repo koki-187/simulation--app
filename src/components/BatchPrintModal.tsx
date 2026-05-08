@@ -85,7 +85,7 @@ export function BatchPrintModal({ open, onClose }: BatchPrintModalProps) {
           case 'cover':
             sections.push({
               label: `カバー — ${label}`,
-              html: coverHtml(result.input.propertyName, label),
+              html: coverHtml(result, label),
               orientation: 'portrait',
             });
             break;

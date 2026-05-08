@@ -104,9 +104,9 @@ export async function batchExportPdf(
             0, 0, canvas.width, sliceH,
           );
 
-          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+          const sliceData = sliceCanvas.toDataURL('image/png');
           const imgH = contentH * (sliceH / pageHeightPx);
-          doc.addImage(sliceData, 'JPEG', margin[3], margin[0], contentW, imgH);
+          doc.addImage(sliceData, 'PNG', margin[3], margin[0], contentW, imgH);
 
           // Release slice canvas memory
           sliceCanvas.width = 0;
