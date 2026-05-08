@@ -4,7 +4,8 @@
  * Shows each PDF section at A4 scale for visual inspection.
  * Accessible at /pdf-preview (dev only).
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
+import { redirect } from 'next/navigation';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -16,6 +17,7 @@ import {
   ratiosSectionHtml,
   fundingPlanSectionHtml,
 } from '@/lib/pdf/sectionHtml';
+import { batchExportPdf } from '@/lib/pdf/batchExport';
 
 const PAGES = [
   { key: 'cover',        label: 'Cover',              orientation: 'portrait'  as const },
@@ -30,9 +32,14 @@ const PAGES = [
 const SCALE = 0.72; // scale factor for viewport display
 
 export default function PdfPreviewPage() {
+  if (process.env.NODE_ENV !== 'development') redirect('/');
+
   const { resultA } = useSimStore(
     useShallow(s => ({ resultA: s.resultA }))
   );
+
+  const [exporting, setExporting] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null);
 
   const htmlMap = useMemo(() => ({
     cover:        coverHtml(resultA, 'パターン A'),
@@ -44,6 +51,26 @@ export default function PdfPreviewPage() {
     funding:      fundingPlanSectionHtml(resultA, 'パターン A'),
   }), [resultA]);
 
+  const handleExport = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    setProgress({ done: 0, total: PAGES.length, label: '準備中...' });
+    try {
+      await batchExportPdf(
+        PAGES.map(p => ({
+          label: p.label,
+          html: htmlMap[p.key as keyof typeof htmlMap],
+          orientation: p.orientation,
+        })),
+        'MAS_Report.pdf',
+        (done, total, label) => setProgress({ done, total, label }),
+      );
+    } finally {
+      setExporting(false);
+      setProgress(null);
+    }
+  }, [exporting, htmlMap]);
+
   return (
     <div style={{ background: '#1a1a1a', minHeight: '100vh', padding: '32px 24px', fontFamily: 'Inter,sans-serif' }}>
       {/* Header */}
@@ -54,8 +81,31 @@ export default function PdfPreviewPage() {
             MONOCHROME DESIGN SYSTEM  v2.0 — {PAGES.length} PAGES
           </div>
         </div>
-        <div style={{ color: '#444', fontSize: 10, letterSpacing: '0.15em' }}>
-          Scale: {Math.round(SCALE * 100)}%
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ color: '#444', fontSize: 10, letterSpacing: '0.15em' }}>
+            Scale: {Math.round(SCALE * 100)}%
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            style={{
+              background: exporting ? '#333' : '#fff',
+              color: exporting ? '#666' : '#000',
+              border: '1px solid #555',
+              padding: '7px 18px',
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.18em',
+              fontFamily: 'Inter,sans-serif',
+              cursor: exporting ? 'not-allowed' : 'pointer',
+              textTransform: 'uppercase' as const,
+              transition: 'all 0.15s',
+            }}
+          >
+            {exporting && progress
+              ? `${progress.done}/${progress.total}  ${progress.label}`
+              : 'Export PDF'}
+          </button>
         </div>
       </div>
 

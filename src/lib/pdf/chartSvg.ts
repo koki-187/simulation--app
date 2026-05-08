@@ -60,7 +60,7 @@ export function cashflowBarChartSvg(rows: CFRow[]): string {
     if (y < mT - 2 || y > mT + cH + 2) return '';
     const isZero = t === 0;
     return `<line x1="${mL}" y1="${y.toFixed(1)}" x2="${W - mR}" y2="${y.toFixed(1)}"
-              stroke="${isZero ? BLACK : '#E0E0E0'}" stroke-width="${isZero ? '1' : '0.5'}"
+              stroke="${isZero ? BLACK : LIGHT}" stroke-width="${isZero ? '1' : '0.5'}"
               stroke-dasharray="${isZero ? 'none' : '3 3'}"/>`
       + `<text x="${mL - 5}" y="${(y + 3.5).toFixed(1)}" text-anchor="end"
               font-size="9" fill="${GRAY}" font-family="Inter,'Helvetica Neue',sans-serif">${t.toLocaleString('ja-JP')}</text>`;
@@ -81,7 +81,7 @@ export function cashflowBarChartSvg(rows: CFRow[]): string {
     // Negative bars: lighter fill
     const opFill = d.opCF >= 0 ? BLACK : GRAY;
     const atFill = d.atCF >= 0 ? GRAY : LIGHT;
-    const atStroke = d.atCF >= 0 ? 'none' : `stroke="${GRAY}" stroke-width="0.5"`;
+    const atStroke = d.atCF >= 0 ? '' : `stroke="${GRAY}" stroke-width="0.5"`;
 
     return `<rect x="${lx.toFixed(1)}" y="${opY.toFixed(1)}" width="${barW.toFixed(1)}" height="${opH.toFixed(1)}" fill="${opFill}"/>`
       + `<rect x="${rx.toFixed(1)}" y="${atY.toFixed(1)}" width="${barW.toFixed(1)}" height="${atH.toFixed(1)}" fill="${atFill}" ${atStroke}/>`
@@ -96,7 +96,7 @@ export function cashflowBarChartSvg(rows: CFRow[]): string {
     + `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">`
     + `<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${GRAY}" stroke-width="1.5"/></pattern></defs>`
     + yLines
-    + `<line x1="${mL}" y1="${mT}" x2="${mL}" y2="${mT + cH}" stroke="#D0D0D0" stroke-width="0.5"/>`
+    + `<line x1="${mL}" y1="${mT}" x2="${mL}" y2="${mT + cH}" stroke="${GRAY}" stroke-width="0.5"/>`
     + bars
     + `<rect x="${mL}" y="${legY}" width="8" height="8" fill="${BLACK}"/>`
     + `<text x="${mL + 12}" y="${legY + 7}" font-size="9" fill="${GRAY}" font-family="Inter,'Helvetica Neue',sans-serif">運営CF</text>`
@@ -132,12 +132,12 @@ export function radarChartSvg(
       const p = pt(i, lv);
       return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
     }).join(' ');
-    return `<polygon points="${pts}" fill="none" stroke="${lv === 100 ? '#AAAAAA' : '#E0E0E0'}" stroke-width="${lv === 100 ? '1' : '0.6'}"/>`;
+    return `<polygon points="${pts}" fill="none" stroke="${lv === 100 ? GRAY : LIGHT}" stroke-width="${lv === 100 ? '1' : '0.6'}"/>`;
   }).join('');
 
   const axisLines = data.map((_, i) => {
     const p = pt(i, 100);
-    return `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="#E0E0E0" stroke-width="0.8"/>`;
+    return `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="${LIGHT}" stroke-width="0.8"/>`;
   }).join('');
 
   const axisLabels = data.map((d, i) => {

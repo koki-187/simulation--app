@@ -156,7 +156,7 @@ function kpiBlock(items: { enLabel: string; value: string; sub: string }[]): str
   const cols = items.slice(0, 3);  // max 3 per row
   const cells = cols.map((item, i) => `
     <div style="padding:0 ${i < cols.length - 1 ? '24px' : '0'} 0 ${i > 0 ? '24px' : '0'};
-      ${i < cols.length - 1 ? `border-right:1px solid #E0E0E0;` : ''}">
+      ${i < cols.length - 1 ? `border-right:1px solid ${LIGHT};` : ''}">
       <div style="font-family:${F_EN};font-size:9px;font-weight:500;
         letter-spacing:0.18em;color:${GRAY};text-transform:uppercase;line-height:1;">${item.enLabel}</div>
       <div style="font-family:${F_EN};font-size:26px;font-weight:200;
@@ -175,27 +175,27 @@ function kpiBlock(items: { enLabel: string; value: string; sub: string }[]): str
 
 /** Table TH */
 function th(text: string, align: 'left' | 'right' | 'center' = 'right', width?: string): string {
-  return `<th style="padding:9px 12px;border:1px solid #222;text-align:${align};
+  return `<th style="padding:9px 12px;border:1px solid ${BLACK};text-align:${align};
     font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.14em;
     text-transform:uppercase;${width ? `width:${width};` : ''}">${text}</th>`;
 }
 
 /** Table TD — normal row */
 function td(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
-  return `<td style="padding:8px 12px;border:1px solid #E8E8E8;
+  return `<td style="padding:8px 12px;border:1px solid ${LIGHT};
     text-align:${align};font-size:11px;${extra}">${content}</td>`;
 }
 
 /** Table TD — highlight row (black bg white text) */
 function tdHL(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
-  return `<td style="padding:8px 12px;border:1px solid #333;
+  return `<td style="padding:8px 12px;border:1px solid ${BLACK};
     text-align:${align};font-size:11px;color:${WHITE};${extra}">${content}</td>`;
 }
 
 /** Page footer */
 function pageFooter(): string {
   return `
-    <div style="margin-top:24px;border-top:1px solid #CCCCCC;padding-top:8px;
+    <div style="margin-top:24px;border-top:1px solid ${GRAY};padding-top:8px;
       display:flex;justify-content:space-between;align-items:center;">
       <div style="font-family:${F_EN};font-size:8px;color:${GRAY};letter-spacing:0.18em;">
         MAS — MY AGENT SIMULATION
@@ -359,7 +359,7 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
         ${td(r.incomeTax > 0 ? fmt(r.incomeTax) : '—')}
         ${td(signStr(r.afterTaxCF), 'right', cfBold)}
         ${td(signStr(r.cumulativeCF), 'right', r.cumulativeCF < 0 ? 'font-weight:700;' : 'font-weight:700;')}
-        ${td(fmt(r.loanBalance), 'right', 'color:#555;')}
+        ${td(fmt(r.loanBalance), 'right', `color:${GRAY};`)}
       </tr>
     `;
   }).join('');
@@ -432,7 +432,7 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
         ${Cell(fmt(r.totalInterest), 'right', isLast ? 'font-weight:700;' : '')}
         ${Cell(fmt(r.totalPrincipal), 'right', isLast ? 'font-weight:700;' : '')}
         ${Cell(fmt(r.endBalance))}
-        ${Cell(fmt(r.cumInterest), 'right', isLast ? 'font-weight:700;' : 'color:#555;')}
+        ${Cell(fmt(r.cumInterest), 'right', isLast ? 'font-weight:700;' : `color:${GRAY};`)}
       </tr>
     `;
   }).join('');
@@ -511,10 +511,10 @@ export function saleSectionHtml(result: SimResult, patternLabel: string): string
       <tr style="background:${bg};">
         ${Cell(esc(s.label), 'left', isHL ? 'font-weight:600;' : 'font-weight:500;')}
         ${Cell(fmt(s.salePrice))}
-        ${Cell(fmt(s.preTaxProfit), 'right', s.preTaxProfit < 0 && !isHL ? 'color:#555;' : '')}
+        ${Cell(fmt(s.preTaxProfit), 'right', s.preTaxProfit < 0 && !isHL ? `color:${GRAY};` : '')}
         ${Cell(fmt(s.capitalGainsTax))}
         ${Cell(fmt(s.afterTaxProfit), 'right', 'font-weight:700;')}
-        ${Cell(cagrStr, 'right', !isHL && s.cagr < 0 ? 'color:#555;' : '')}
+        ${Cell(cagrStr, 'right', !isHL && s.cagr < 0 ? `color:${GRAY};` : '')}
         ${Cell(multStr, 'right', 'font-weight:600;')}
       </tr>
     `;
@@ -539,7 +539,7 @@ export function saleSectionHtml(result: SimResult, patternLabel: string): string
         <span>最良シナリオ（税引後手残り 最大）</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <div style="width:12px;height:12px;background:${LIGHT};border:1px solid #DDD;"></div>
+        <div style="width:12px;height:12px;background:${LIGHT};border:1px solid ${GRAY};"></div>
         <span>その他のシナリオ</span>
       </div>
     </div>
@@ -587,9 +587,9 @@ export function taxSectionHtml(result: SimResult, patternLabel: string): string 
   function twoColRow(label: string, val: string, bold = false): string {
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;
-        padding:7px 0;border-bottom:1px solid #EEEEEE;font-size:11px;">
-        <span style="color:#444;">${label}</span>
-        <span style="font-weight:${bold ? '700' : '500'};color:${bold ? BLACK : '#222'};
+        padding:7px 0;border-bottom:1px solid ${LIGHT};font-size:11px;">
+        <span style="color:${GRAY};">${label}</span>
+        <span style="font-weight:${bold ? '700' : '500'};color:${bold ? BLACK : BLACK};
           font-family:${bold ? F_EN : 'inherit'};">${val}</span>
       </div>
     `;
@@ -747,7 +747,7 @@ export function ratiosSectionHtml(result: SimResult, patternLabel: string): stri
         <span>HEALTH SCORE</span>
         <span style="color:${BLACK};font-weight:500;">${scorePct}%</span>
       </div>
-      <div style="height:4px;background:#E0E0E0;width:100%;">
+      <div style="height:4px;background:${LIGHT};width:100%;">
         <div style="height:4px;background:${BLACK};width:${scorePct}%;"></div>
       </div>
     </div>
@@ -791,9 +791,9 @@ export function fundingPlanSectionHtml(result: SimResult, patternLabel: string):
   function planRow(label: string, val: string, bold = false): string {
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;
-        padding:7px 0;border-bottom:1px solid #EEEEEE;font-size:11px;">
-        <span style="color:#444;">${label}</span>
-        <span style="font-weight:${bold ? '700' : '500'};color:${bold ? BLACK : '#222'};
+        padding:7px 0;border-bottom:1px solid ${LIGHT};font-size:11px;">
+        <span style="color:${GRAY};">${label}</span>
+        <span style="font-weight:${bold ? '700' : '500'};color:${bold ? BLACK : BLACK};
           font-family:${bold ? F_EN : 'inherit'};">${val}</span>
       </div>
     `;
@@ -863,7 +863,7 @@ export function fundingPlanSectionHtml(result: SimResult, patternLabel: string):
             text-transform:uppercase;margin-bottom:8px;">自己資金比率</div>
           <div style="display:flex;height:6px;width:100%;">
             <div style="width:${equityPct}%;background:${BLACK};"></div>
-            <div style="width:${loanPct}%;background:#CCCCCC;"></div>
+            <div style="width:${loanPct}%;background:${GRAY};"></div>
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;">
             <span style="color:${BLACK};font-weight:600;">自己資金 ${equityPct}%&ensp;${fmtM(input.equity)}</span>

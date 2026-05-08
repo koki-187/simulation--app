@@ -20,15 +20,15 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: 'MAS - My Agent Simuration',
+  title: 'MAS - My Agent Simulation',
   description: '不動産投資・住宅ローン返済・借り換え・繰上げ返済シミュレーター。キャッシュフロー分析、売却シナリオ、税務明細まで網羅。',
   keywords: ['不動産投資', '住宅ローン', 'シミュレーター', 'キャッシュフロー', '借り換え', '繰上げ返済', 'MAS'],
   openGraph: {
-    title: 'MAS - My Agent Simuration',
+    title: 'MAS - My Agent Simulation',
     description: '不動産投資・住宅ローンシミュレーター',
     type: 'website',
     locale: 'ja_JP',
-    images: [{ url: '/mas-ogp.png', width: 1200, height: 400, alt: 'MAS - My Agent Simuration' }],
+    images: [{ url: '/mas-ogp.png', width: 1200, height: 400, alt: 'MAS - My Agent Simulation' }],
   },
   manifest: '/manifest.json',
   icons: {
