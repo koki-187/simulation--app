@@ -219,7 +219,7 @@ export async function POST(req: Request) {
     const monthStr = getCurrentMonthJST();
 
     // Try primary source, then fallback
-    let rates = await fetchViaJinaReader();
+    const rates = await fetchViaJinaReader();
     const primaryCount = Object.keys(rates).length;
 
     if (primaryCount < 4) {

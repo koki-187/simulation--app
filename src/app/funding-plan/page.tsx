@@ -8,6 +8,32 @@ import { INVESTMENT_BANKS } from '@/lib/data/investmentBanks';
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
 
+/* ─── sub-components (declared outside render to avoid state reset) ────────── */
+const labelCls = 'text-neutral-700 text-sm font-medium';
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[140px_1fr] gap-3 items-center py-1.5 border-b border-neutral-100 last:border-0">
+      <span className={labelCls}>{label}</span>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="bg-white rounded-xl border border-neutral-100"
+      style={{ boxShadow: 'var(--shadow-card)' }}
+    >
+      <div className="bg-orange-500 text-white font-bold text-sm px-4 py-2 rounded-t-lg">
+        {title}
+      </div>
+      <div className="p-4 space-y-0">{children}</div>
+    </div>
+  );
+}
+
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 function calcMonthly(principal: number, annualRate: number, years: number): number {
   const r = annualRate / 100 / 12;
@@ -284,42 +310,6 @@ export default function FundingPlanPage() {
     'border border-neutral-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-full bg-white';
   const readonlyCls =
     'border border-neutral-200 rounded px-3 py-2 text-sm bg-neutral-50 text-neutral-500 w-full';
-  const labelCls = 'text-neutral-700 text-sm font-medium';
-
-  function Row({
-    label,
-    children,
-  }: {
-    label: string;
-    children: React.ReactNode;
-  }) {
-    return (
-      <div className="grid grid-cols-[140px_1fr] gap-3 items-center py-1.5 border-b border-neutral-100 last:border-0">
-        <span className={labelCls}>{label}</span>
-        <div>{children}</div>
-      </div>
-    );
-  }
-
-  function SectionCard({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) {
-    return (
-      <div
-        className="bg-white rounded-xl border border-neutral-100"
-        style={{ boxShadow: 'var(--shadow-card)' }}
-      >
-        <div className="bg-orange-500 text-white font-bold text-sm px-4 py-2 rounded-t-lg">
-          {title}
-        </div>
-        <div className="p-4 space-y-0">{children}</div>
-      </div>
-    );
-  }
 
   /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
