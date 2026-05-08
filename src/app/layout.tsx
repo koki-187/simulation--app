@@ -1,10 +1,18 @@
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans_JP } from 'next/font/google';
+import { Noto_Sans_JP, Inter } from 'next/font/google';
 import './globals.css';
 import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration';
 
+const inter = Inter({
+  weight: ['200', '300', '400', '500', '600'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  preload: false,
+});
+
 const notoSansJP = Noto_Sans_JP({
-  weight: ['400', '600', '700'],
+  weight: ['300', '400', '500', '700'],
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-noto-sans-jp',
@@ -56,7 +64,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={notoSansJP.variable}>
+    <html lang="ja" className={`${inter.variable} ${notoSansJP.variable}`}>
       <body className={`min-h-screen bg-neutral-50 ${notoSansJP.className}`}>
         <ServiceWorkerRegistration />
         {children}

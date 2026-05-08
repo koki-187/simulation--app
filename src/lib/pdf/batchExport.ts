@@ -46,10 +46,10 @@ export async function batchExportPdf(
       left: 0;
       width: ${containerWidthPx}px;
       background: white;
-      font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+      font-family: Inter, 'Helvetica Neue', Arial, 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif;
       font-size: 11px;
       line-height: 1.5;
-      color: #111827;
+      color: #000000;
       padding: 0;
       box-sizing: border-box;
     `;

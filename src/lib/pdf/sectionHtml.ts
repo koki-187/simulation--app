@@ -1,21 +1,69 @@
 /**
- * 各ページのHTML生成関数。
- * batchExport.ts と組み合わせて一括PDF出力に使用する。
+ * MAS PDF — Monochrome Design System  v2.0
+ * ─────────────────────────────────────────
+ * Philosophy: "派手さよりも上質、装飾よりも余白、色よりも階層"
+ * Inspired by architectural journals and top-tier financial reports.
+ *
+ * COLOR PALETTE (pure monotone — NO chroma allowed)
+ *   #000000  Black   — text, borders, headers, bars
+ *   #888888  Gray    — secondary text, muted labels, sub-bars
+ *   #F7F7F7  Light   — card backgrounds, alternate rows
+ *   #FFFFFF  White   — primary background
+ *
+ * TYPOGRAPHY
+ *   EN : Inter  (weight 200 / 300 / 400 / 500 / 600)
+ *   JA : Noto Sans JP (weight 300 / 400 / 500)
+ *   NO serif, NO Garamond, NO Cormorant — Gothic only.
+ *   letter-spacing: generous (0.1–0.4em for labels, 0.04em for body)
+ *
+ * LAYOUT
+ *   A4 portrait  : 794 × 1123 px  padding 91px / 83px  (24mm / 22mm)
+ *   A4 landscape : 1122 × 794 px  padding 83px / 91px
+ *   Content is LEFT-ALIGNED, not centered.
+ *   One theme per page. Large whitespace. Data is not packed.
+ *
+ * SECTION HEADING (3-layer, always in this order)
+ *   1. English title  — Inter 30px weight 200  letter-spacing 0.04em
+ *   2. Japanese title — Noto 13px weight 500   letter-spacing 0.35em
+ *   3. Black underline — 32px wide × 2px tall
+ *
+ * KPI BLOCK
+ *   top + bottom 2px solid #000, 3-column grid
+ *   label: 9px uppercase letter-spacing 0.18em gray
+ *   value: Inter 26px weight 200
+ *   sub  : 10px gray
+ *
+ * TABLES
+ *   header row : background #000, color #fff, uppercase small-caps style
+ *   body rows  : alternate #fff / #F7F7F7
+ *   highlight  : background #000, color #fff (best scenario, totals)
+ *
+ * PROPERTY CARD
+ *   background #F7F7F7, left border 3px solid #000
+ *
+ * COVER PAGE
+ *   background #000, 48px grid overlay (white 3% opacity)
+ *   L-corner marks (white 30% opacity, 28px legs)
+ *   title 40px Inter weight 300 white
  */
 
 import { SimResult, CFRow, AmortRow } from '@/lib/calc/types';
 import { cashflowBarChartSvg } from './chartSvg';
 
-// ── カラーパレット ────────────────────────────────────────────────────────
-const NAVY   = '#1C2B4A';
-const ORANGE = '#E8632A';
-const GREEN  = '#16A34A';
-const RED    = '#DC2626';
-const INDIGO = '#6366F1';
+// ── Palette ──────────────────────────────────────────────────────────────────
+const BLACK = '#000000';
+const GRAY  = '#888888';
+const LIGHT = '#F7F7F7';
+const WHITE = '#FFFFFF';
 
-// ── ヘルパー関数 ──────────────────────────────────────────────────────────
+// ── Font stacks ──────────────────────────────────────────────────────────────
+const F_EN = "Inter, 'Helvetica Neue', Arial, sans-serif";
+const F_JA = "'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif";
+const F    = `${F_EN}, ${F_JA}`;
 
-/** XSS対策: ユーザー入力をHTMLエスケープ */
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** XSS guard */
 function esc(s: string | undefined | null): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -25,228 +73,341 @@ function esc(s: string | undefined | null): string {
     .replace(/'/g, '&#x27;');
 }
 
-/** 円表記 */
+/** ¥X,XXX,XXX */
 function fmt(n: number): string {
   return '¥' + Math.round(n).toLocaleString('ja-JP');
 }
 
-/** 万円表記（小数1桁） */
+/** X.X万円 */
 function fmtM(n: number): string {
-  return (Math.round(n / 10000) / 10).toFixed(1) + '万円';
+  const man = Math.round(n) / 10000;
+  if (man >= 10000) return `${(man / 10000).toFixed(2)}億円`;
+  if (man >= 1000)  return `${(man / 1000).toFixed(2)}千万円`;
+  return `${man.toFixed(1)}万円`;
 }
 
-/** 正負で色を返す */
-function valColor(n: number, neutralColor = NAVY): string {
-  if (n > 0) return GREEN;
-  if (n < 0) return RED;
-  return neutralColor;
+/** Today in ja-JP */
+function today(): string {
+  return new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// ── 共通コンポーネント ─────────────────────────────────────────────────────
+// ── 48px grid SVG overlay (for cover) ────────────────────────────────────────
+function gridOverlay(w: number, h: number): string {
+  const step = 48;
+  const lines: string[] = [];
+  for (let x = step; x < w; x += step) {
+    lines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="white" stroke-width="0.5"/>`);
+  }
+  for (let y = step; y < h; y += step) {
+    lines.push(`<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="white" stroke-width="0.5"/>`);
+  }
+  return `<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:0.03;"
+    viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"
+    >${lines.join('')}</svg>`;
+}
 
-/** ページヘッダー（全セクション共通）*/
-function pageHeader(sectionName: string, propertyName: string, patternLabel: string): string {
-  const today = new Date().toLocaleDateString('ja-JP');
+/** L-corner marks */
+function cornerMarks(leg = 28): string {
+  const s = `background:rgba(255,255,255,0.30)`;
+  const pos = [
+    { top: '20px', left: '20px',  borderTop: `1px solid rgba(255,255,255,0.35)`, borderLeft: `1px solid rgba(255,255,255,0.35)` },
+    { top: '20px', right: '20px', borderTop: `1px solid rgba(255,255,255,0.35)`, borderRight: `1px solid rgba(255,255,255,0.35)` },
+    { bottom: '20px', left: '20px',  borderBottom: `1px solid rgba(255,255,255,0.35)`, borderLeft: `1px solid rgba(255,255,255,0.35)` },
+    { bottom: '20px', right: '20px', borderBottom: `1px solid rgba(255,255,255,0.35)`, borderRight: `1px solid rgba(255,255,255,0.35)` },
+  ];
+  return pos.map(p => {
+    const styleObj = Object.entries(p).map(([k, v]) => `${k}:${v}`).join(';');
+    return `<div style="position:absolute;${styleObj};width:${leg}px;height:${leg}px;"></div>`;
+  }).join('');
+}
+
+// ── Shared page components ────────────────────────────────────────────────────
+
+/** Top strip: MAS logotype + property + date */
+function pageHeader(propertyName: string, patternLabel: string): string {
   return `
-    <div style="background:${NAVY};color:white;padding:12px 22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
-      <div style="display:flex;align-items:center;gap:14px;">
-        <div style="font-size:22px;font-weight:900;letter-spacing:0.08em;color:${ORANGE};">MAS</div>
-        <div style="width:1px;height:30px;background:rgba(255,255,255,0.25);"></div>
-        <div>
-          <div style="font-size:15px;font-weight:700;">${sectionName}</div>
-          <div style="font-size:10px;opacity:0.65;margin-top:2px;">${esc(propertyName)} — ${esc(patternLabel)}</div>
-        </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;
+      padding-bottom:10px;border-bottom:1px solid ${BLACK};margin-bottom:32px;">
+      <div style="font-family:${F_EN};font-size:12px;font-weight:300;
+        letter-spacing:0.45em;color:${BLACK};">MAS</div>
+      <div style="font-size:9px;color:${GRAY};letter-spacing:0.12em;text-align:center;">
+        ${esc(propertyName)}&ensp;/&ensp;${esc(patternLabel)}
       </div>
-      <div style="text-align:right;font-size:10px;opacity:0.65;">${today}</div>
+      <div style="font-size:9px;color:${GRAY};letter-spacing:0.08em;">${today()}</div>
     </div>
-    <div style="height:3px;background:linear-gradient(to right,${ORANGE},#F59E0B);margin-bottom:18px;"></div>
   `;
 }
 
-/** ページフッター（全セクション共通）*/
+/** 3-layer section heading */
+function sectionHeading(enTitle: string, jaTitle: string): string {
+  return `
+    <div style="margin-bottom:28px;">
+      <div style="font-family:${F_EN};font-size:30px;font-weight:200;
+        color:${BLACK};letter-spacing:0.04em;line-height:1;">${enTitle}</div>
+      <div style="font-family:${F_JA};font-size:13px;font-weight:500;
+        color:${BLACK};letter-spacing:0.35em;margin-top:8px;">${jaTitle}</div>
+      <div style="width:32px;height:2px;background:${BLACK};margin-top:12px;"></div>
+    </div>
+  `;
+}
+
+/** KPI block — top+bottom 2px black border, 3-col grid */
+function kpiBlock(items: { enLabel: string; value: string; sub: string }[]): string {
+  const cols = items.slice(0, 3);  // max 3 per row
+  const cells = cols.map((item, i) => `
+    <div style="padding:0 ${i < cols.length - 1 ? '24px' : '0'} 0 ${i > 0 ? '24px' : '0'};
+      ${i < cols.length - 1 ? `border-right:1px solid #E0E0E0;` : ''}">
+      <div style="font-family:${F_EN};font-size:9px;font-weight:500;
+        letter-spacing:0.18em;color:${GRAY};text-transform:uppercase;line-height:1;">${item.enLabel}</div>
+      <div style="font-family:${F_EN};font-size:26px;font-weight:200;
+        color:${BLACK};margin-top:8px;line-height:1;letter-spacing:-0.01em;">${item.value}</div>
+      <div style="font-size:10px;color:${GRAY};margin-top:6px;font-family:${F_JA};">${item.sub}</div>
+    </div>
+  `).join('');
+  return `
+    <div style="border-top:2px solid ${BLACK};border-bottom:2px solid ${BLACK};
+      padding:20px 0;display:grid;grid-template-columns:repeat(${cols.length},1fr);
+      gap:0;margin-bottom:32px;">
+      ${cells}
+    </div>
+  `;
+}
+
+/** Table TH */
+function th(text: string, align: 'left' | 'right' | 'center' = 'right', width?: string): string {
+  return `<th style="padding:9px 12px;border:1px solid #222;text-align:${align};
+    font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.14em;
+    text-transform:uppercase;${width ? `width:${width};` : ''}">${text}</th>`;
+}
+
+/** Table TD — normal row */
+function td(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
+  return `<td style="padding:8px 12px;border:1px solid #E8E8E8;
+    text-align:${align};font-size:11px;${extra}">${content}</td>`;
+}
+
+/** Table TD — highlight row (black bg white text) */
+function tdHL(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
+  return `<td style="padding:8px 12px;border:1px solid #333;
+    text-align:${align};font-size:11px;color:${WHITE};${extra}">${content}</td>`;
+}
+
+/** Page footer */
 function pageFooter(): string {
   return `
-    <div style="margin-top:16px;border-top:1px solid #E5E7EB;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:9px;color:#9CA3AF;font-weight:600;">MAS — My Agent Simuration</div>
-      <div style="font-size:9px;color:#9CA3AF;">※本資料は試算概算値であり、投資助言ではありません。実際の数値は専門家にご相談ください。</div>
-    </div>
-  `;
-}
-
-/** KPIカード1枚 */
-function kpiCard(label: string, value: string, sub: string, accentColor: string): string {
-  return `
-    <div style="background:#F8FAFC;border:1px solid #E5E7EB;border-radius:8px;padding:12px;text-align:center;border-top:3px solid ${accentColor};">
-      <div style="font-size:10px;color:#6B7280;margin-bottom:5px;font-weight:500;">${label}</div>
-      <div style="font-size:18px;font-weight:800;color:${accentColor};line-height:1.1;">${value}</div>
-      <div style="font-size:9px;color:#9CA3AF;margin-top:3px;">${sub}</div>
-    </div>
-  `;
-}
-
-/** KPIグリッド（4列）*/
-function kpiGrid(cards: string[]): string {
-  return `
-    <div style="display:grid;grid-template-columns:repeat(${cards.length},1fr);gap:12px;margin-bottom:18px;">
-      ${cards.join('')}
-    </div>
-  `;
-}
-
-/** テーブルのth */
-function th(text: string, align: 'left' | 'right' | 'center' = 'right'): string {
-  return `<th style="padding:8px 12px;border:1px solid #374151;text-align:${align};font-weight:600;font-size:11px;">${text}</th>`;
-}
-
-/** テーブルのtd */
-function td(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
-  return `<td style="padding:7px 12px;border:1px solid #E5E7EB;text-align:${align};${extra}">${content}</td>`;
-}
-
-// ── カバーページ ──────────────────────────────────────────────────────────
-
-export function coverHtml(result: SimResult, patternLabel: string): string {
-  const input = result.input;
-  const today = new Date().toLocaleDateString('ja-JP');
-  const loanAmount = result.loanAmount;
-  const grossYield = (result.ratios.grossYield * 100).toFixed(2);
-  const netYield   = (result.ratios.netYield * 100).toFixed(2);
-  const monthly    = Math.round(result.monthlyPayment).toLocaleString('ja-JP');
-  const rent       = Math.round(result.effectiveMonthlyRent).toLocaleString('ja-JP');
-
-  return `
-    <div style="font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;background:white;min-height:1050px;display:flex;flex-direction:column;">
-
-      <!-- 上部: 紺背景 -->
-      <div style="background:${NAVY};padding:60px 60px 50px;flex-shrink:0;">
-        <div style="color:${ORANGE};font-size:28px;font-weight:900;letter-spacing:0.15em;margin-bottom:4px;">MAS</div>
-        <div style="color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:40px;">My Agent Simuration</div>
-        <div style="color:white;font-size:30px;font-weight:800;line-height:1.3;margin-bottom:12px;">${esc(input.propertyName)}</div>
-        <div style="display:inline-block;background:${ORANGE};color:white;font-size:12px;font-weight:700;padding:5px 16px;border-radius:20px;">${esc(patternLabel)}</div>
-        <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:16px;">不動産投資シミュレーションレポート</div>
+    <div style="margin-top:24px;border-top:1px solid #CCCCCC;padding-top:8px;
+      display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-family:${F_EN};font-size:8px;color:${GRAY};letter-spacing:0.18em;">
+        MAS — MY AGENT SIMULATION
       </div>
-
-      <!-- 中央: 主要指標 -->
-      <div style="flex:1;padding:40px 60px;">
-        <div style="font-size:12px;font-weight:700;color:#6B7280;letter-spacing:0.08em;margin-bottom:16px;">■ 主要投資指標</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:30px;">
-
-          <!-- 物件価格 -->
-          <div style="border:1px solid #E5E7EB;border-radius:10px;padding:18px;border-left:4px solid ${NAVY};">
-            <div style="font-size:10px;color:#9CA3AF;margin-bottom:6px;">物件価格</div>
-            <div style="font-size:22px;font-weight:800;color:${NAVY};">${fmtM(input.propertyPrice)}</div>
-          </div>
-
-          <!-- 借入額 -->
-          <div style="border:1px solid #E5E7EB;border-radius:10px;padding:18px;border-left:4px solid ${ORANGE};">
-            <div style="font-size:10px;color:#9CA3AF;margin-bottom:6px;">借入額</div>
-            <div style="font-size:22px;font-weight:800;color:${ORANGE};">${fmtM(loanAmount)}</div>
-          </div>
-
-          <!-- 利回り -->
-          <div style="border:1px solid #E5E7EB;border-radius:10px;padding:18px;border-left:4px solid ${GREEN};">
-            <div style="font-size:10px;color:#9CA3AF;margin-bottom:6px;">表面利回り / 実質利回り</div>
-            <div style="font-size:22px;font-weight:800;color:${GREEN};">${grossYield}% / ${netYield}%</div>
-          </div>
-
-          <!-- 月額 -->
-          <div style="border:1px solid #E5E7EB;border-radius:10px;padding:18px;border-left:4px solid ${INDIGO};">
-            <div style="font-size:10px;color:#9CA3AF;margin-bottom:6px;">月額返済 / 実効家賃</div>
-            <div style="font-size:22px;font-weight:800;color:${INDIGO};">¥${monthly} / ¥${rent}</div>
-          </div>
-        </div>
-
-        <!-- 物件詳細 -->
-        <div style="background:#F8FAFC;border-radius:8px;padding:16px;font-size:11px;color:#4B5563;">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-            <div><span style="color:#9CA3AF;">物件種別:</span> ${esc(input.propertyType)}</div>
-            <div><span style="color:#9CA3AF;">金利:</span> ${(input.rate * 100).toFixed(2)}%</div>
-            <div><span style="color:#9CA3AF;">返済期間:</span> ${input.termYears}年</div>
-            <div><span style="color:#9CA3AF;">空室率:</span> ${(input.vacancyRate * 100).toFixed(1)}%</div>
-            <div><span style="color:#9CA3AF;">保有期間:</span> ${input.holdingYears}年</div>
-            <div><span style="color:#9CA3AF;">作成日:</span> ${today}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- フッター -->
-      <div style="background:#F8FAFC;border-top:1px solid #E5E7EB;padding:12px 60px;font-size:9px;color:#9CA3AF;">
+      <div style="font-size:8px;color:${GRAY};">
         ※本資料は試算概算値であり、投資助言ではありません。実際の数値は専門家にご相談ください。
       </div>
     </div>
   `;
 }
 
-// ── キャッシュフロー分析 ─────────────────────────────────────────────────
+// ── Page wrapper ─────────────────────────────────────────────────────────────
+
+function pageWrap(content: string, orientation: 'portrait' | 'landscape' = 'portrait'): string {
+  const isLand = orientation === 'landscape';
+  const pV = 91, pH = 83;  // vertical / horizontal padding px
+  return `
+    <div style="font-family:${F};background:${WHITE};
+      width:${isLand ? 1122 : 794}px;min-height:${isLand ? 794 : 1123}px;
+      padding:${pV}px ${pH}px;box-sizing:border-box;position:relative;color:${BLACK};">
+      ${content}
+    </div>
+  `;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// COVER PAGE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export function coverHtml(result: SimResult, patternLabel: string): string {
+  const input      = result.input;
+  const loanAmount = result.loanAmount;
+  const grossYield = (result.ratios.grossYield * 100).toFixed(2);
+  const netYield   = (result.ratios.netYield * 100).toFixed(2);
+  const monthly    = Math.round(result.monthlyPayment).toLocaleString('ja-JP');
+  const rent       = Math.round(result.effectiveMonthlyRent).toLocaleString('ja-JP');
+
+  const metrics = [
+    { en: 'PROPERTY PRICE', ja: '物件価格',     val: fmtM(input.propertyPrice) },
+    { en: 'LOAN AMOUNT',    ja: '借入額',        val: fmtM(loanAmount) },
+    { en: 'GROSS YIELD',    ja: '表面利回り',    val: `${grossYield}%` },
+    { en: 'NET YIELD',      ja: '実質利回り',    val: `${netYield}%` },
+    { en: 'MONTHLY PMT',    ja: '月額返済',      val: `¥${monthly}` },
+    { en: 'EFFECTIVE RENT', ja: '実効家賃',      val: `¥${rent}` },
+  ];
+
+  const metricCells = metrics.map(m => `
+    <div style="border-right:1px solid rgba(255,255,255,0.10);padding:0 20px;">
+      <div style="font-family:${F_EN};font-size:8px;font-weight:400;letter-spacing:0.2em;
+        color:rgba(255,255,255,0.40);text-transform:uppercase;line-height:1;">${m.en}</div>
+      <div style="font-family:${F_JA};font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;">${m.ja}</div>
+      <div style="font-family:${F_EN};font-size:18px;font-weight:300;color:${WHITE};
+        margin-top:8px;letter-spacing:0.01em;">${m.val}</div>
+    </div>
+  `).join('');
+
+  return `
+    <div style="font-family:${F};background:${BLACK};width:794px;min-height:1123px;
+      position:relative;overflow:hidden;box-sizing:border-box;">
+
+      ${gridOverlay(794, 1123)}
+      ${cornerMarks(28)}
+
+      <!-- Upper content area -->
+      <div style="padding:100px 83px 0;position:relative;z-index:1;">
+
+        <!-- Report type label -->
+        <div style="font-family:${F_EN};font-size:9px;font-weight:400;letter-spacing:0.35em;
+          color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:56px;">
+          REAL ESTATE INVESTMENT SIMULATION REPORT
+        </div>
+
+        <!-- Property name -->
+        <div style="font-family:${F_EN};font-size:40px;font-weight:300;color:${WHITE};
+          letter-spacing:0.02em;line-height:1.2;margin-bottom:12px;">
+          ${esc(input.propertyName)}
+        </div>
+
+        <!-- Pattern badge -->
+        <div style="display:inline-block;border:1px solid rgba(255,255,255,0.30);
+          padding:5px 14px;margin-bottom:8px;">
+          <span style="font-family:${F_EN};font-size:9px;font-weight:400;letter-spacing:0.25em;
+            color:rgba(255,255,255,0.60);">${esc(patternLabel).toUpperCase()}</span>
+        </div>
+
+        <!-- Property meta -->
+        <div style="font-family:${F_JA};font-size:11px;color:rgba(255,255,255,0.35);
+          margin-bottom:72px;letter-spacing:0.06em;">
+          ${esc(input.propertyType)}${input.location ? `&ensp;—&ensp;${esc(input.location)}` : ''}
+        </div>
+
+        <!-- Thin separator -->
+        <div style="width:100%;height:1px;background:rgba(255,255,255,0.12);margin-bottom:36px;"></div>
+
+        <!-- Metrics grid (3×2) -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:0;">
+          ${metricCells}
+        </div>
+
+        <!-- Second row separator -->
+        <div style="width:100%;height:1px;background:rgba(255,255,255,0.12);margin-top:32px;"></div>
+      </div>
+
+      <!-- Bottom strip: property details -->
+      <div style="position:absolute;bottom:0;left:0;right:0;
+        border-top:1px solid rgba(255,255,255,0.10);padding:28px 83px;z-index:1;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:24px;">
+          ${[
+            ['INTEREST RATE', '金利', `${(input.rate * 100).toFixed(2)}%`],
+            ['TERM',          '返済期間', `${input.termYears}年`],
+            ['VACANCY',       '空室率',   `${(input.vacancyRate * 100).toFixed(1)}%`],
+            ['HOLDING',       '保有期間', `${input.holdingYears}年`],
+          ].map(([en, ja, val]) => `
+            <div style="border-right:1px solid rgba(255,255,255,0.08);padding:0 16px 0 0;margin-right:16px;">
+              <div style="font-family:${F_EN};font-size:8px;letter-spacing:0.18em;
+                color:rgba(255,255,255,0.28);text-transform:uppercase;">${en}</div>
+              <div style="font-family:${F_JA};font-size:9px;color:rgba(255,255,255,0.28);margin-top:2px;">${ja}</div>
+              <div style="font-family:${F_EN};font-size:14px;font-weight:300;
+                color:rgba(255,255,255,0.70);margin-top:6px;">${val}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-family:${F_EN};font-size:8px;letter-spacing:0.3em;
+            color:rgba(255,255,255,0.20);">MAS — MY AGENT SIMULATION</div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.20);letter-spacing:0.08em;">${today()}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CASH FLOW ANALYSIS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function cashflowSectionHtml(result: SimResult, patternLabel: string): string {
   const rows  = result.cashFlows;
   const input = result.input;
 
-  // KPI値の計算
-  const firstRow  = rows[0];
-  const lastRow   = rows[rows.length - 1];
+  const firstRow = rows[0];
+  const lastRow  = rows[rows.length - 1];
   const annualRent = firstRow ? Math.round(firstRow.rentalIncome) : 0;
   const annualLoan = firstRow ? Math.round(firstRow.annualLoanPayment) : 0;
-  const firstCF    = firstRow ? Math.round(firstRow.afterTaxCF) : 0;
-  const cumulCF    = lastRow  ? Math.round(lastRow.cumulativeCF) : 0;
+  const firstCF   = firstRow ? Math.round(firstRow.afterTaxCF) : 0;
+  const cumulCF   = lastRow  ? Math.round(lastRow.cumulativeCF) : 0;
 
-  const tableRows = rows.map((r: CFRow, i: number) => `
-    <tr style="background:${i % 2 === 0 ? 'white' : '#F8FAFC'};">
-      ${td(`${r.year}年`, 'center', 'font-weight:600;')}
-      ${td(fmt(r.rentalIncome))}
-      ${td(fmt(r.managementCosts))}
-      ${td(fmt(r.operatingCF), 'right', `color:${valColor(r.operatingCF)};font-weight:600;`)}
-      ${td(fmt(r.annualLoanPayment))}
-      ${td(fmt(r.incomeTax), 'right', `color:${r.incomeTax > 0 ? RED : '#111827'};`)}
-      ${td(fmt(r.afterTaxCF), 'right', `color:${valColor(r.afterTaxCF)};font-weight:700;`)}
-      ${td(fmt(r.cumulativeCF), 'right', `color:${valColor(r.cumulativeCF)};font-weight:700;`)}
-      ${td(fmt(r.loanBalance))}
-    </tr>
-  `).join('');
+  const signStr = (n: number) => n >= 0 ? fmt(n) : `△ ${fmt(Math.abs(n))}`;
 
-  return `
-    <div style="padding:0 20px 20px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
-      ${pageHeader('キャッシュフロー分析', input.propertyName, patternLabel)}
+  const tableRows = rows.map((r: CFRow, i: number) => {
+    const isHL = false; // no color highlight in monochrome — use weight instead
+    const bg   = i % 2 === 0 ? WHITE : LIGHT;
+    const cfBold = r.afterTaxCF < 0 ? 'font-weight:600;' : 'font-weight:700;';
+    return `
+      <tr style="background:${bg};">
+        ${td(`${r.year}`, 'center', 'font-weight:600;font-family:Inter,sans-serif;')}
+        ${td(fmt(r.rentalIncome))}
+        ${td(fmt(r.managementCosts))}
+        ${td(fmt(r.operatingCF), 'right', r.operatingCF < 0 ? 'font-weight:600;' : '')}
+        ${td(fmt(r.annualLoanPayment))}
+        ${td(r.incomeTax > 0 ? fmt(r.incomeTax) : '—')}
+        ${td(signStr(r.afterTaxCF), 'right', cfBold)}
+        ${td(signStr(r.cumulativeCF), 'right', r.cumulativeCF < 0 ? 'font-weight:700;' : 'font-weight:700;')}
+        ${td(fmt(r.loanBalance), 'right', 'color:#555;')}
+      </tr>
+    `;
+  }).join('');
 
-      ${kpiGrid([
-        kpiCard('年間家賃収入', fmt(annualRent), '1年目実効', NAVY),
-        kpiCard('年間ローン返済', fmt(annualLoan), '元利合計', ORANGE),
-        kpiCard('1年目税引後CF', fmt(firstCF), firstCF >= 0 ? '黒字' : '赤字', firstCF >= 0 ? GREEN : RED),
-        kpiCard(`${input.holdingYears}年累計CF`, fmt(cumulCF), `保有${input.holdingYears}年後`, valColor(cumulCF)),
-      ])}
+  const content = `
+    ${pageHeader(input.propertyName, patternLabel)}
+    ${sectionHeading('CASH FLOW ANALYSIS', 'キャッシュフロー分析')}
 
-      ${cashflowBarChartSvg(rows)}
+    ${kpiBlock([
+      { enLabel: 'Annual Rent',    value: fmt(annualRent), sub: '1年目 年間家賃収入' },
+      { enLabel: 'Loan Payment',   value: fmt(annualLoan), sub: '1年目 年間ローン返済' },
+      { enLabel: `${input.holdingYears}Y Cum. CF`, value: signStr(cumulCF), sub: `${input.holdingYears}年間 税引後累計CF` },
+    ])}
 
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
-        <thead>
-          <tr style="background:${NAVY};color:white;">
-            ${th('年', 'center')}
-            ${th('家賃収入')}
-            ${th('運営費')}
-            ${th('運営CF')}
-            ${th('ローン返済')}
-            ${th('税金')}
-            ${th('税引後CF')}
-            ${th('累計CF')}
-            ${th('残債')}
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
+    ${cashflowBarChartSvg(rows)}
 
-      ${pageFooter()}
-    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">
+      <thead>
+        <tr style="background:${BLACK};color:${WHITE};">
+          ${th('年', 'center', '36px')}
+          ${th('家賃収入')}
+          ${th('運営費')}
+          ${th('運営CF')}
+          ${th('ローン返済')}
+          ${th('税金')}
+          ${th('税引後CF')}
+          ${th('累計CF')}
+          ${th('残債')}
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+
+    ${pageFooter()}
   `;
+
+  return pageWrap(content, 'landscape');
 }
 
-// ── 返済スケジュール ─────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AMORTIZATION SCHEDULE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function amortizationSectionHtml(result: SimResult, patternLabel: string): string {
   const rows  = result.amortization;
   const input = result.input;
 
-  const annualRows = Array.from({ length: input.termYears }, (_, i) => {
+  const annualRows = Array.from({ length: input.holdingYears }, (_, i) => {
     const yr = rows.filter((r: AmortRow) => r.year === i + 1);
     return {
       year:          i + 1,
@@ -260,426 +421,460 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
 
   const totalInterest = annualRows[annualRows.length - 1]?.cumInterest ?? result.totalInterest;
 
-  const tableRows = annualRows.map((r, i) => `
-    <tr style="background:${i % 2 === 0 ? 'white' : '#F8FAFC'};">
-      ${td(`${r.year}年`, 'center', 'font-weight:700;')}
-      ${td(fmt(r.totalPayment))}
-      ${td(fmt(r.totalInterest), 'right', `color:${RED};font-weight:600;`)}
-      ${td(fmt(r.totalPrincipal), 'right', `color:${GREEN};font-weight:600;`)}
-      ${td(fmt(r.endBalance), 'right', 'font-weight:600;')}
-      ${td(fmt(r.cumInterest), 'right', `color:#6B7280;`)}
-    </tr>
-  `).join('');
+  const tableRows = annualRows.map((r, i) => {
+    const isLast = i === annualRows.length - 1;
+    const bg = isLast ? BLACK : (i % 2 === 0 ? WHITE : LIGHT);
+    const Cell = isLast ? tdHL : td;
+    return `
+      <tr style="background:${bg};">
+        ${Cell(`${r.year}`, 'center', 'font-weight:700;font-family:Inter,sans-serif;')}
+        ${Cell(fmt(r.totalPayment))}
+        ${Cell(fmt(r.totalInterest), 'right', isLast ? 'font-weight:700;' : '')}
+        ${Cell(fmt(r.totalPrincipal), 'right', isLast ? 'font-weight:700;' : '')}
+        ${Cell(fmt(r.endBalance))}
+        ${Cell(fmt(r.cumInterest), 'right', isLast ? 'font-weight:700;' : 'color:#555;')}
+      </tr>
+    `;
+  }).join('');
 
-  return `
-    <div style="padding:0 20px 20px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
-      ${pageHeader('返済スケジュール', input.propertyName, patternLabel)}
+  const content = `
+    ${pageHeader(input.propertyName, patternLabel)}
+    ${sectionHeading('REPAYMENT SCHEDULE', '返済スケジュール')}
 
-      ${kpiGrid([
-        kpiCard('借入額', fmtM(result.loanAmount), '元本', NAVY),
-        kpiCard('金利', `${(input.rate * 100).toFixed(2)}%`, '年率', ORANGE),
-        kpiCard('返済期間', `${input.termYears}年`, '元利均等', INDIGO),
-        kpiCard('総支払利息', fmtM(totalInterest), '利息合計', RED),
-      ])}
+    ${kpiBlock([
+      { enLabel: 'Loan Amount',   value: fmtM(result.loanAmount),    sub: '借入元本' },
+      { enLabel: 'Interest Rate', value: `${(input.rate * 100).toFixed(2)}%`, sub: '年利（固定）' },
+      { enLabel: 'Total Interest',value: fmtM(totalInterest),         sub: `${input.holdingYears}年間 累計利息` },
+    ])}
 
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
-        <thead>
-          <tr style="background:${NAVY};color:white;">
-            ${th('年', 'center')}
-            ${th('年間返済額')}
-            ${th('うち利息')}
-            ${th('うち元金')}
-            ${th('残高')}
-            ${th('累計利息')}
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">
+      <thead>
+        <tr style="background:${BLACK};color:${WHITE};">
+          ${th('年', 'center', '36px')}
+          ${th('年間返済額')}
+          ${th('うち利息')}
+          ${th('うち元金')}
+          ${th('期末残高')}
+          ${th('累計利息')}
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
 
-      ${pageFooter()}
+    <!-- Mini bar: loan vs interest ratio -->
+    <div style="background:${LIGHT};padding:14px 18px;display:flex;align-items:center;gap:20px;">
+      <div style="font-size:9px;letter-spacing:0.12em;color:${GRAY};white-space:nowrap;">元利内訳</div>
+      ${(() => {
+        const total = result.loanAmount + totalInterest;
+        const pctP  = Math.round((result.loanAmount / total) * 100);
+        const pctI  = 100 - pctP;
+        return `
+          <div style="flex:1;">
+            <div style="display:flex;height:8px;width:100%;">
+              <div style="width:${pctP}%;background:${BLACK};"></div>
+              <div style="width:${pctI}%;background:${GRAY};"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:${GRAY};">
+              <span>元金 ${pctP}%&ensp;${fmtM(result.loanAmount)}</span>
+              <span>利息 ${pctI}%&ensp;${fmtM(totalInterest)}</span>
+            </div>
+          </div>
+        `;
+      })()}
     </div>
+
+    ${pageFooter()}
   `;
+
+  return pageWrap(content, 'portrait');
 }
 
-// ── 売却シミュレーション ─────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SALE SIMULATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function saleSectionHtml(result: SimResult, patternLabel: string): string {
   const input     = result.input;
   const scenarios = result.saleScenarios;
 
-  function rowBg(label: string, idx: number): string {
-    const l = label.toLowerCase();
-    if (l.includes('早期') || l.includes('3年') || l.includes('5年')) return '#FFF5F0';
-    if (l.includes('長期') || l.includes('10年') || l.includes('15年') || l.includes('20年')) return '#F0FDF4';
-    return idx % 2 === 0 ? 'white' : '#F8FAFC';
-  }
+  // Best scenario = highest afterTaxProfit
+  const bestIdx = scenarios.reduce((best, s, i) =>
+    s.afterTaxProfit > scenarios[best].afterTaxProfit ? i : best, 0);
 
-  function cagrColor(cagr: number): string {
-    if (cagr >= 0.03) return GREEN;
-    if (cagr >= 0)    return ORANGE;
-    return RED;
-  }
+  const tableRows = scenarios.map((s, i) => {
+    const isHL = i === bestIdx;
+    const bg   = isHL ? BLACK : (i % 2 === 0 ? WHITE : LIGHT);
+    const Cell = isHL ? tdHL : td;
+    const cagrStr = `${(s.cagr * 100).toFixed(2)}%`;
+    const multStr = `${s.investmentMultiple.toFixed(2)}x`;
+    return `
+      <tr style="background:${bg};">
+        ${Cell(esc(s.label), 'left', isHL ? 'font-weight:600;' : 'font-weight:500;')}
+        ${Cell(fmt(s.salePrice))}
+        ${Cell(fmt(s.preTaxProfit), 'right', s.preTaxProfit < 0 && !isHL ? 'color:#555;' : '')}
+        ${Cell(fmt(s.capitalGainsTax))}
+        ${Cell(fmt(s.afterTaxProfit), 'right', 'font-weight:700;')}
+        ${Cell(cagrStr, 'right', !isHL && s.cagr < 0 ? 'color:#555;' : '')}
+        ${Cell(multStr, 'right', 'font-weight:600;')}
+      </tr>
+    `;
+  }).join('');
 
-  const tableRows = scenarios.map((s, i) => `
-    <tr style="background:${rowBg(s.label, i)};">
-      ${td(esc(s.label), 'left', 'font-weight:600;')}
-      ${td(fmt(s.salePrice))}
-      ${td(fmt(s.preTaxProfit), 'right', `color:${valColor(s.preTaxProfit)};`)}
-      ${td(fmt(s.capitalGainsTax), 'right', `color:${RED};`)}
-      ${td(fmt(s.afterTaxProfit), 'right', `color:${valColor(s.afterTaxProfit)};font-weight:700;font-size:13px;`)}
-      ${td(`${(s.cagr * 100).toFixed(2)}%`, 'right', `color:${cagrColor(s.cagr)};font-weight:600;`)}
-      ${td(`${s.investmentMultiple.toFixed(2)}x`, 'right', `color:${valColor(s.investmentMultiple - 1)};font-weight:600;`)}
-    </tr>
-  `).join('');
+  const bestScenario = scenarios[bestIdx];
 
-  return `
-    <div style="padding:0 20px 20px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
-      ${pageHeader('売却シミュレーション', input.propertyName, patternLabel)}
+  const content = `
+    ${pageHeader(input.propertyName, patternLabel)}
+    ${sectionHeading('SALE SIMULATION', '売却シミュレーション')}
 
-      <div style="display:flex;gap:12px;margin-bottom:16px;font-size:10px;">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div style="width:14px;height:14px;background:#FFF5F0;border:1px solid #FECACA;border-radius:2px;"></div>
-          <span style="color:#6B7280;">早期売却シナリオ</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div style="width:14px;height:14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:2px;"></div>
-          <span style="color:#6B7280;">長期保有シナリオ</span>
-        </div>
+    ${kpiBlock([
+      { enLabel: 'Property Price',    value: fmtM(input.propertyPrice), sub: '取得価格' },
+      { enLabel: 'Best Net Proceeds', value: fmt(bestScenario?.afterTaxProfit ?? 0), sub: '最良シナリオ 税引後手残り' },
+      { enLabel: 'Best CAGR',         value: `${((bestScenario?.cagr ?? 0) * 100).toFixed(2)}%`, sub: '最良シナリオ 年平均成長率' },
+    ])}
+
+    <!-- Legend -->
+    <div style="display:flex;gap:20px;margin-bottom:12px;font-size:9px;color:${GRAY};">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="width:12px;height:12px;background:${BLACK};"></div>
+        <span>最良シナリオ（税引後手残り 最大）</span>
       </div>
-
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
-        <thead>
-          <tr style="background:${NAVY};color:white;">
-            ${th('シナリオ', 'left')}
-            ${th('売却価格')}
-            ${th('税引前手残り')}
-            ${th('譲渡所得税')}
-            ${th('税引後手残り')}
-            ${th('CAGR')}
-            ${th('投資倍率')}
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-
-      ${pageFooter()}
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="width:12px;height:12px;background:${LIGHT};border:1px solid #DDD;"></div>
+        <span>その他のシナリオ</span>
+      </div>
     </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px;">
+      <thead>
+        <tr style="background:${BLACK};color:${WHITE};">
+          ${th('シナリオ', 'left')}
+          ${th('売却価格')}
+          ${th('税引前手残り')}
+          ${th('譲渡所得税')}
+          ${th('税引後手残り')}
+          ${th('CAGR')}
+          ${th('投資倍率')}
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+
+    <!-- Explanatory note -->
+    <div style="background:${LIGHT};border-left:3px solid ${BLACK};padding:14px 16px;
+      font-size:10px;color:${GRAY};line-height:1.8;">
+      <div style="font-weight:500;color:${BLACK};margin-bottom:4px;">算出前提</div>
+      保有年数 ${input.holdingYears}年 &ensp;|&ensp;
+      取得価格 ${fmtM(input.propertyPrice)} &ensp;|&ensp;
+      金利 ${(input.rate * 100).toFixed(2)}% &ensp;|&ensp;
+      返済期間 ${input.termYears}年<br>
+      CAGR = 税引後手残り ÷ 自己資金の年平均成長率。投資倍率 = 総回収 ÷ 自己資金。
+    </div>
+
+    ${pageFooter()}
   `;
+
+  return pageWrap(content, 'portrait');
 }
 
-// ── 税金詳細 ─────────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TAX DETAILS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function taxSectionHtml(result: SimResult, patternLabel: string): string {
   const t     = result.taxDetail;
   const input = result.input;
 
-  const incomeRows: [string, string, string][] = [
-    ['家賃収入', fmt(t.rentalRevenue), ''],
-    ['管理費・修繕積立金', fmt(t.managementExp), ''],
-    ['損害保険料（概算）', fmt(t.insuranceEst), ''],
-    ['固定資産税', fmt(t.fixedAssetTax), ''],
-    ['減価償却費', fmt(t.depreciation), ''],
-    ['ローン利息', fmt(t.loanInterest), ''],
-    ['経費合計', fmt(t.totalExpenses), `color:${RED};font-weight:700;`],
-    ['不動産所得', fmt(t.realEstateIncome), `color:${valColor(t.realEstateIncome)};font-weight:700;font-size:13px;`],
-  ];
-
-  const taxRows: [string, string, string][] = [
-    ['所得税率（概算）', `${(t.incomeTaxRate * 100).toFixed(2)}%`, ''],
-    ['所得税概算', fmt(t.incomeTax), `color:${RED};`],
-    ['住民税（10%）', fmt(t.residentTax), `color:${RED};`],
-    ['合計税負担', fmt(t.totalTaxBurden), `color:${RED};font-weight:700;font-size:13px;`],
-  ];
-
-  const gainRows: [string, string, string][] = [
-    ['売却価格', fmt(t.salePrice), ''],
-    ['取得費（購入価格）', fmt(t.acquisitionCost), ''],
-    ['累計減価償却費', fmt(t.accumulatedDep), ''],
-    ['売却費用（3%）', fmt(t.sellingCosts), ''],
-    ['譲渡所得', fmt(t.taxableGain), `color:${valColor(t.taxableGain)};font-weight:700;`],
-    [`譲渡所得税（${t.isLongTerm ? '長期' : '短期'} ${(t.taxRate * 100).toFixed(2)}%）`, fmt(t.capitalGainsTax), `color:${RED};font-weight:700;font-size:13px;`],
-  ];
-
-  function simpleTableRows(data: [string, string, string][]): string {
-    return data.map(([label, val, extra], i) => `
-      <tr style="background:${i % 2 === 0 ? 'white' : '#F8FAFC'};">
-        <td style="padding:7px 12px;border:1px solid #E5E7EB;font-size:12px;">${label}</td>
-        <td style="padding:7px 12px;border:1px solid #E5E7EB;text-align:right;font-size:12px;${extra}">${val}</td>
-      </tr>
-    `).join('');
+  function twoColRow(label: string, val: string, bold = false): string {
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:7px 0;border-bottom:1px solid #EEEEEE;font-size:11px;">
+        <span style="color:#444;">${label}</span>
+        <span style="font-weight:${bold ? '700' : '500'};color:${bold ? BLACK : '#222'};
+          font-family:${bold ? F_EN : 'inherit'};">${val}</span>
+      </div>
+    `;
   }
 
-  return `
-    <div style="padding:0 20px 20px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
-      ${pageHeader('税金詳細レポート', input.propertyName, patternLabel)}
+  function miniHeader(text: string): string {
+    return `<div style="font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.15em;
+      text-transform:uppercase;color:${GRAY};padding:10px 0 6px;
+      border-bottom:1px solid ${BLACK};margin-bottom:6px;">${text}</div>`;
+  }
 
-      ${kpiGrid([
-        kpiCard('不動産所得（1年目）', fmt(t.realEstateIncome), t.hasLoss ? '赤字（損益通算可）' : '黒字', valColor(t.realEstateIncome)),
-        kpiCard('合計税負担', fmt(t.totalTaxBurden), '所得税+住民税', RED),
-        kpiCard('節税見込額', fmt(t.estimatedTaxRefund), t.hasLoss ? '損益通算効果' : '-', GREEN),
-        kpiCard('譲渡所得税', fmt(t.capitalGainsTax), t.isLongTerm ? '長期（5年超）' : '短期（5年以下）', RED),
-      ])}
+  const content = `
+    ${pageHeader(input.propertyName, patternLabel)}
+    ${sectionHeading('TAX ANALYSIS', '税金詳細レポート')}
 
-      <!-- 2カラムレイアウト -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-        <!-- 左: 不動産所得計算 -->
-        <div>
-          <div style="font-size:11px;font-weight:700;color:${NAVY};margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${NAVY};">不動産所得の計算（1年目）</div>
-          <table style="width:100%;border-collapse:collapse;">
-            <tbody>${simpleTableRows(incomeRows)}</tbody>
-          </table>
-        </div>
-        <!-- 右: 税負担サマリー -->
-        <div>
-          <div style="font-size:11px;font-weight:700;color:${NAVY};margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${ORANGE};">税負担サマリー</div>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
-            <tbody>${simpleTableRows(taxRows)}</tbody>
-          </table>
+    ${kpiBlock([
+      { enLabel: 'Real Estate Income', value: fmt(t.realEstateIncome), sub: t.hasLoss ? '1年目 不動産所得（赤字）' : '1年目 不動産所得' },
+      { enLabel: 'Total Tax Burden',   value: fmt(t.totalTaxBurden),   sub: '所得税 + 住民税' },
+      { enLabel: 'Capital Gains Tax',  value: fmt(t.capitalGainsTax),  sub: t.isLongTerm ? '譲渡所得税（長期）' : '譲渡所得税（短期）' },
+    ])}
 
-          ${t.hasLoss ? `
-          <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:12px;font-size:11px;">
-            <div style="font-weight:700;color:${GREEN};margin-bottom:4px;">損益通算メリット</div>
-            <div style="color:#374151;">給与所得との損益通算により</div>
-            <div style="font-size:16px;font-weight:800;color:${GREEN};margin-top:4px;">¥${Math.round(t.estimatedTaxRefund).toLocaleString('ja-JP')} 節税見込</div>
-          </div>
-          ` : `
-          <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:12px;font-size:11px;">
-            <div style="font-weight:700;color:${ORANGE};margin-bottom:4px;">追加税負担</div>
-            <div style="color:#374151;">不動産所得が増加するため</div>
-            <div style="font-size:16px;font-weight:800;color:${ORANGE};margin-top:4px;">¥${Math.round(t.totalTaxBurden).toLocaleString('ja-JP')} 追加税負担</div>
-          </div>
-          `}
-        </div>
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:20px;">
 
-      <!-- 譲渡所得税計算 -->
+      <!-- Left: 不動産所得の計算 -->
       <div>
-        <div style="font-size:11px;font-weight:700;color:${NAVY};margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${RED};">譲渡所得税の計算（${input.holdingYears}年後売却想定）</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tbody>${simpleTableRows(gainRows)}</tbody>
-        </table>
+        ${miniHeader('Real Estate Income  不動産所得の計算（1年目）')}
+        ${[
+          ['家賃収入',          fmt(t.rentalRevenue)],
+          ['管理費・修繕積立金', fmt(t.managementExp)],
+          ['損害保険料（概算）', fmt(t.insuranceEst)],
+          ['固定資産税',        fmt(t.fixedAssetTax)],
+          ['減価償却費',        fmt(t.depreciation)],
+          ['ローン利息',        fmt(t.loanInterest)],
+          ['経費合計',          fmt(t.totalExpenses), true],
+          ['不動産所得',        fmt(t.realEstateIncome), true],
+        ].map(([l, v, b]) => twoColRow(String(l), String(v), !!b)).join('')}
       </div>
 
-      ${pageFooter()}
+      <!-- Right: 税負担 + 節税 -->
+      <div>
+        ${miniHeader('Tax Burden  税負担サマリー')}
+        ${[
+          [`所得税率（概算）`,  `${(t.incomeTaxRate * 100).toFixed(2)}%`],
+          ['所得税概算',        fmt(t.incomeTax)],
+          ['住民税（10%）',     fmt(t.residentTax)],
+          ['合計税負担',        fmt(t.totalTaxBurden), true],
+        ].map(([l, v, b]) => twoColRow(String(l), String(v), !!b)).join('')}
+
+        <!-- Tax effect note -->
+        <div style="background:${LIGHT};border-left:3px solid ${BLACK};
+          padding:12px 14px;margin-top:14px;font-size:10px;color:${GRAY};line-height:1.7;">
+          <div style="font-weight:500;color:${BLACK};margin-bottom:4px;">
+            ${t.hasLoss ? '損益通算メリット' : '追加税負担'}
+          </div>
+          ${t.hasLoss
+            ? `給与所得との損益通算により<br><span style="font-family:${F_EN};font-size:16px;font-weight:300;color:${BLACK};">${fmt(t.estimatedTaxRefund)}</span>&ensp;節税見込`
+            : `不動産所得 増加のため<br><span style="font-family:${F_EN};font-size:16px;font-weight:300;color:${BLACK};">${fmt(t.totalTaxBurden)}</span>&ensp;追加税負担`
+          }
+        </div>
+      </div>
     </div>
+
+    <!-- Capital gains tax -->
+    <div>
+      ${miniHeader(`Capital Gains  譲渡所得税の計算（${input.holdingYears}年後売却想定）`)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+        <div>
+          ${[
+            ['売却価格',          fmt(t.salePrice)],
+            ['取得費（購入価格）', fmt(t.acquisitionCost)],
+            ['累計減価償却費',    fmt(t.accumulatedDep)],
+            ['売却費用（3%）',    fmt(t.sellingCosts)],
+          ].map(([l, v]) => twoColRow(l, v)).join('')}
+        </div>
+        <div>
+          ${twoColRow('譲渡所得',
+            fmt(t.taxableGain), true)}
+          ${twoColRow(`譲渡所得税率（${t.isLongTerm ? '長期 5年超' : '短期 5年以下'} / ${(t.taxRate * 100).toFixed(2)}%）`,
+            fmt(t.capitalGainsTax), true)}
+        </div>
+      </div>
+    </div>
+
+    ${pageFooter()}
   `;
+
+  return pageWrap(content, 'portrait');
 }
 
-// ── 財務指標 ─────────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FINANCIAL HEALTH RATIOS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function ratiosSectionHtml(result: SimResult, patternLabel: string): string {
   const r     = result.ratios;
   const input = result.input;
 
-  interface RatioRow {
+  interface RatioItem {
     label: string;
     value: string;
     guide: string;
     pass: boolean | null;
-    color: string;
   }
 
-  const ratioRows: RatioRow[] = [
-    {
-      label: '年収倍率（源泉）',
-      value: `${r.incomeMultipleTax.toFixed(2)}倍`,
-      guide: '目安: 7倍以下',
-      pass: r.incomeMultipleTax <= 7,
-      color: r.incomeMultipleTax <= 7 ? GREEN : RED,
-    },
-    {
-      label: '年収倍率（申告所得）',
-      value: `${r.incomeMultipleDeclared.toFixed(2)}倍`,
-      guide: '目安: 7倍以下',
-      pass: r.incomeMultipleDeclared <= 7,
-      color: r.incomeMultipleDeclared <= 7 ? GREEN : RED,
-    },
-    {
-      label: '返済比率（源泉）',
-      value: `${(r.repaymentRatioTax * 100).toFixed(1)}%`,
-      guide: '目安: 25%以下',
-      pass: r.repaymentRatioTax <= 0.25,
-      color: r.repaymentRatioTax <= 0.25 ? GREEN : RED,
-    },
-    {
-      label: '返済比率（申告所得）',
-      value: `${(r.repaymentRatioDeclared * 100).toFixed(1)}%`,
-      guide: '目安: 25%以下',
-      pass: r.repaymentRatioDeclared <= 0.25,
-      color: r.repaymentRatioDeclared <= 0.25 ? GREEN : RED,
-    },
-    {
-      label: '表面利回り',
-      value: `${(r.grossYield * 100).toFixed(2)}%`,
-      guide: '目安: 4%以上',
-      pass: r.grossYield >= 0.04,
-      color: r.grossYield >= 0.04 ? GREEN : ORANGE,
-    },
-    {
-      label: '実質利回り',
-      value: `${(r.netYield * 100).toFixed(2)}%`,
-      guide: '目安: 2.5%以上',
-      pass: r.netYield >= 0.025,
-      color: r.netYield >= 0.025 ? GREEN : RED,
-    },
-    {
-      label: 'DSCR（負債返済倍率）',
-      value: `${r.dscr.toFixed(2)}倍`,
-      guide: '目安: 1.2倍以上',
-      pass: r.dscr >= 1.2,
-      color: r.dscr >= 1.2 ? GREEN : RED,
-    },
-    {
-      label: '損益分岐点賃料',
-      value: `¥${Math.round(r.breakevenRent).toLocaleString('ja-JP')}/月`,
-      guide: `現況家賃: ¥${Math.round(result.effectiveMonthlyRent).toLocaleString('ja-JP')}/月`,
-      pass: result.effectiveMonthlyRent >= r.breakevenRent,
-      color: result.effectiveMonthlyRent >= r.breakevenRent ? GREEN : RED,
-    },
+  const ratios: RatioItem[] = [
+    { label: '年収倍率（源泉）',   value: `${r.incomeMultipleTax.toFixed(2)}倍`,         guide: '目安 7倍以下',      pass: r.incomeMultipleTax <= 7 },
+    { label: '年収倍率（申告）',   value: `${r.incomeMultipleDeclared.toFixed(2)}倍`,     guide: '目安 7倍以下',      pass: r.incomeMultipleDeclared <= 7 },
+    { label: '返済比率（源泉）',   value: `${(r.repaymentRatioTax * 100).toFixed(1)}%`,   guide: '目安 25%以下',      pass: r.repaymentRatioTax <= 0.25 },
+    { label: '返済比率（申告）',   value: `${(r.repaymentRatioDeclared * 100).toFixed(1)}%`, guide: '目安 25%以下',   pass: r.repaymentRatioDeclared <= 0.25 },
+    { label: '表面利回り',         value: `${(r.grossYield * 100).toFixed(2)}%`,           guide: '目安 4%以上',       pass: r.grossYield >= 0.04 },
+    { label: '実質利回り',         value: `${(r.netYield * 100).toFixed(2)}%`,             guide: '目安 2.5%以上',     pass: r.netYield >= 0.025 },
+    { label: 'DSCR',               value: `${r.dscr.toFixed(2)}倍`,                        guide: '目安 1.2倍以上',    pass: r.dscr >= 1.2 },
+    { label: '損益分岐点賃料',     value: `¥${Math.round(r.breakevenRent).toLocaleString('ja-JP')}/月`,
+      guide: `現況 ¥${Math.round(result.effectiveMonthlyRent).toLocaleString('ja-JP')}/月`,
+      pass: result.effectiveMonthlyRent >= r.breakevenRent },
   ];
 
-  const passCount = ratioRows.filter(r => r.pass === true).length;
+  const passCount = ratios.filter(r => r.pass === true).length;
 
-  const tableRows = ratioRows.map((row, i) => `
-    <tr style="background:${i % 2 === 0 ? 'white' : '#F8FAFC'};">
-      <td style="padding:8px 12px;border:1px solid #E5E7EB;font-size:12px;font-weight:500;">${row.label}</td>
-      <td style="padding:8px 12px;border:1px solid #E5E7EB;font-size:14px;font-weight:800;text-align:right;color:${row.color};">${row.value}</td>
-      <td style="padding:8px 12px;border:1px solid #E5E7EB;font-size:11px;color:#6B7280;text-align:center;">${row.guide}</td>
-      <td style="padding:8px 12px;border:1px solid #E5E7EB;text-align:center;font-size:16px;">
-        ${row.pass === true ? '<span style="color:' + GREEN + ';">&#10003;</span>' : row.pass === false ? '<span style="color:' + RED + ';">&#9888;</span>' : '<span style="color:#9CA3AF;">—</span>'}
-      </td>
-    </tr>
-  `).join('');
+  const tableRows = ratios.map((row, i) => {
+    const bg   = i % 2 === 0 ? WHITE : LIGHT;
+    const mark = row.pass === true ? '✓' : row.pass === false ? '✗' : '—';
+    const markStyle = row.pass === true
+      ? `font-weight:700;font-size:14px;color:${BLACK};`
+      : row.pass === false
+      ? `font-weight:700;font-size:14px;color:${GRAY};`
+      : `color:${GRAY};`;
+    return `
+      <tr style="background:${bg};">
+        ${td(row.label, 'left', 'font-weight:500;')}
+        ${td(row.value, 'right', `font-family:${F_EN};font-size:13px;font-weight:300;`)}
+        ${td(row.guide, 'center', `color:${GRAY};font-size:10px;`)}
+        ${td(`<span style="${markStyle}">${mark}</span>`, 'center')}
+      </tr>
+    `;
+  }).join('');
 
-  return `
-    <div style="padding:0 20px 20px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
-      ${pageHeader('財務健全性指標', input.propertyName, patternLabel)}
+  // Score bar
+  const scorePct = Math.round((passCount / ratios.length) * 100);
 
-      ${kpiGrid([
-        kpiCard('表面利回り', `${(r.grossYield * 100).toFixed(2)}%`, '年間家賃 ÷ 物件価格', GREEN),
-        kpiCard('実質利回り', `${(r.netYield * 100).toFixed(2)}%`, '経費控除後', r.netYield >= 0.025 ? GREEN : RED),
-        kpiCard('DSCR', `${r.dscr.toFixed(2)}x`, r.dscr >= 1.2 ? '健全（1.2以上）' : '注意（1.2未満）', r.dscr >= 1.2 ? GREEN : RED),
-        kpiCard('総合評価', `${passCount}/${ratioRows.length}`, '基準クリア', passCount >= 6 ? GREEN : passCount >= 4 ? ORANGE : RED),
-      ])}
+  const content = `
+    ${pageHeader(input.propertyName, patternLabel)}
+    ${sectionHeading('FINANCIAL HEALTH', '財務健全性指標')}
 
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
-        <thead>
-          <tr style="background:${NAVY};color:white;">
-            ${th('指標名', 'left')}
-            ${th('実績値')}
-            ${th('目安・参考値', 'center')}
-            ${th('判定', 'center')}
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
+    ${kpiBlock([
+      { enLabel: 'Gross Yield',  value: `${(r.grossYield * 100).toFixed(2)}%`, sub: '表面利回り' },
+      { enLabel: 'Net Yield',    value: `${(r.netYield * 100).toFixed(2)}%`,   sub: '実質利回り（経費控除後）' },
+      { enLabel: 'Health Score', value: `${passCount} / ${ratios.length}`,      sub: '基準クリア数' },
+    ])}
 
-      <div style="background:#F8FAFC;border-radius:6px;padding:10px 14px;font-size:10px;color:#6B7280;margin-bottom:12px;">
-        <strong style="color:${NAVY};">指標の見方:</strong>
-        &#10003; = 基準クリア（融資審査・投資判断において良好） ／
-        &#9888; = 基準未達（リスク要因として認識が必要）
+    <!-- Score bar -->
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;font-size:9px;
+        color:${GRAY};letter-spacing:0.1em;margin-bottom:6px;">
+        <span>HEALTH SCORE</span>
+        <span style="color:${BLACK};font-weight:500;">${scorePct}%</span>
       </div>
-
-      ${pageFooter()}
+      <div style="height:4px;background:#E0E0E0;width:100%;">
+        <div style="height:4px;background:${BLACK};width:${scorePct}%;"></div>
+      </div>
     </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px;">
+      <thead>
+        <tr style="background:${BLACK};color:${WHITE};">
+          ${th('指標名', 'left')}
+          ${th('実績値')}
+          ${th('目安・参考値', 'center')}
+          ${th('判定', 'center', '48px')}
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+
+    <div style="background:${LIGHT};border-left:3px solid ${BLACK};
+      padding:12px 16px;font-size:10px;color:${GRAY};line-height:1.8;">
+      <span style="font-weight:500;color:${BLACK};">判定の見方：</span>&ensp;
+      ✓ = 基準クリア（融資審査・投資判断において良好）&ensp;
+      ✗ = 基準未達（リスク要因として把握が必要）
+    </div>
+
+    ${pageFooter()}
   `;
+
+  return pageWrap(content, 'portrait');
 }
 
-// ── 資金計画書 ──────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FUNDING PLAN
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function fundingPlanSectionHtml(result: SimResult, patternLabel: string): string {
   const input      = result.input;
   const totalFunds = input.propertyPrice + input.expenses;
   const loanAmount = result.loanAmount;
-
-  function blockHeader(title: string, accent: string): string {
-    return `
-      <div style="font-size:11px;font-weight:700;color:${NAVY};margin:0 0 8px;padding:6px 12px;background:#F8FAFC;border-left:3px solid ${accent};border-radius:0 4px 4px 0;">
-        ${title}
-      </div>
-    `;
-  }
+  const equityPct  = Math.round((input.equity / totalFunds) * 100);
+  const loanPct    = 100 - equityPct;
 
   function planRow(label: string, val: string, bold = false): string {
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #F3F4F6;font-size:12px;">
-        <span style="color:#4B5563;">${label}</span>
-        <span style="font-weight:${bold ? '800' : '600'};color:${bold ? NAVY : '#111827'};">${val}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:7px 0;border-bottom:1px solid #EEEEEE;font-size:11px;">
+        <span style="color:#444;">${label}</span>
+        <span style="font-weight:${bold ? '700' : '500'};color:${bold ? BLACK : '#222'};
+          font-family:${bold ? F_EN : 'inherit'};">${val}</span>
       </div>
     `;
   }
 
-  return `
-    <div style="padding:0 20px 20px;font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;">
-      ${pageHeader('資金計画書', input.propertyName, patternLabel)}
+  function cardHeader(enLabel: string, jaLabel: string): string {
+    return `
+      <div style="font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.15em;
+        text-transform:uppercase;color:${GRAY};margin-bottom:2px;">${enLabel}</div>
+      <div style="font-size:11px;font-weight:500;color:${BLACK};
+        letter-spacing:0.08em;margin-bottom:10px;padding-bottom:6px;
+        border-bottom:1px solid ${BLACK};">${jaLabel}</div>
+    `;
+  }
 
-      ${kpiGrid([
-        kpiCard('物件価格', fmtM(input.propertyPrice), '税抜', NAVY),
-        kpiCard('自己資金', fmtM(input.equity), '頭金', ORANGE),
-        kpiCard('借入額', fmtM(loanAmount), `金利${(input.rate * 100).toFixed(2)}%`, INDIGO),
-        kpiCard('月額返済', fmt(result.monthlyPayment), `${input.termYears}年返済`, GREEN),
-      ])}
+  const content = `
+    ${pageHeader(input.propertyName, patternLabel)}
+    ${sectionHeading('FUNDING PLAN', '資金計画書')}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-        <!-- 左列: 物件情報 + 資金計画 -->
-        <div>
-          ${blockHeader('物件情報', NAVY)}
-          <div style="padding:0 4px;">
-            ${planRow('物件名', esc(input.propertyName))}
-            ${planRow('物件種別', esc(input.propertyType))}
-            ${planRow('所在地', esc(input.location))}
-            ${planRow('物件価格', fmt(input.propertyPrice))}
-            ${planRow('諸費用', fmt(input.expenses))}
-            ${planRow('必要総資金', fmt(totalFunds), true)}
-          </div>
+    ${kpiBlock([
+      { enLabel: 'Property Price', value: fmtM(input.propertyPrice), sub: '物件価格（税抜）' },
+      { enLabel: 'Self Funding',   value: fmtM(input.equity),        sub: '自己資金（頭金）' },
+      { enLabel: 'Monthly PMT',   value: fmt(result.monthlyPayment), sub: `毎月返済額（${input.termYears}年）` },
+    ])}
 
-          <div style="margin-top:16px;">
-            ${blockHeader('資金計画', ORANGE)}
-            <div style="padding:0 4px;">
-              ${planRow('自己資金（頭金）', fmt(input.equity))}
-              ${planRow('借入額', fmt(loanAmount), true)}
-              ${planRow('金利', `${(input.rate * 100).toFixed(2)}%`)}
-              ${planRow('返済期間', `${input.termYears}年`)}
-              ${input.lender ? planRow('金融機関', esc(input.lender)) : ''}
-            </div>
-          </div>
-        </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:24px;">
 
-        <!-- 右列: 返済詳細 + 収支概要 -->
-        <div>
-          ${blockHeader('返済詳細', INDIGO)}
-          <div style="padding:0 4px;">
-            ${planRow('月額返済額', fmt(result.monthlyPayment), true)}
-            ${planRow('総返済額', fmt(result.totalPayment))}
-            ${planRow('うち利息', fmt(result.totalInterest))}
-          </div>
+      <!-- Left -->
+      <div>
+        ${cardHeader('Property', '物件情報')}
+        ${planRow('物件名',    esc(input.propertyName))}
+        ${planRow('物件種別',  esc(input.propertyType))}
+        ${planRow('所在地',    esc(input.location) || '—')}
+        ${planRow('物件価格',  fmt(input.propertyPrice))}
+        ${planRow('諸費用',    fmt(input.expenses))}
+        ${planRow('必要総資金', fmt(totalFunds), true)}
 
-          <div style="margin-top:16px;">
-            ${blockHeader('収支概要', GREEN)}
-            <div style="padding:0 4px;">
-              ${planRow('月額家賃収入', fmt(input.monthlyRent))}
-              ${planRow('空室率', `${(input.vacancyRate * 100).toFixed(1)}%`)}
-              ${planRow('実効月額家賃', fmt(result.effectiveMonthlyRent))}
-              ${planRow('表面利回り', `${(result.ratios.grossYield * 100).toFixed(2)}%`)}
-              ${planRow('実質利回り', `${(result.ratios.netYield * 100).toFixed(2)}%`)}
-            </div>
-          </div>
-
-          <!-- 自己資金比率バー -->
-          <div style="margin-top:16px;background:#F8FAFC;border-radius:8px;padding:12px;">
-            <div style="font-size:10px;color:#6B7280;margin-bottom:6px;">自己資金比率</div>
-            <div style="background:#E5E7EB;border-radius:4px;height:10px;overflow:hidden;">
-              <div style="background:${ORANGE};height:100%;width:${Math.min(100, Math.round((input.equity / totalFunds) * 100))}%;border-radius:4px;"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
-              <span style="color:${ORANGE};font-weight:700;">自己資金 ${Math.round((input.equity / totalFunds) * 100)}%</span>
-              <span style="color:#6B7280;">借入 ${Math.round((loanAmount / totalFunds) * 100)}%</span>
-            </div>
-          </div>
+        <div style="margin-top:20px;">
+          ${cardHeader('Finance', '資金計画')}
+          ${planRow('自己資金（頭金）', fmt(input.equity))}
+          ${planRow('借入額',          fmt(loanAmount), true)}
+          ${planRow('金利',            `${(input.rate * 100).toFixed(2)}%（年）`)}
+          ${planRow('返済期間',        `${input.termYears}年`)}
+          ${input.lender ? planRow('金融機関', esc(input.lender)) : ''}
         </div>
       </div>
 
-      ${pageFooter()}
+      <!-- Right -->
+      <div>
+        ${cardHeader('Repayment', '返済詳細')}
+        ${planRow('月額返済額', fmt(result.monthlyPayment), true)}
+        ${planRow('総返済額',   fmt(result.totalPayment))}
+        ${planRow('うち利息',   fmt(result.totalInterest))}
+
+        <div style="margin-top:20px;">
+          ${cardHeader('Income', '収支概要')}
+          ${planRow('月額家賃収入',  fmt(input.monthlyRent))}
+          ${planRow('空室率',        `${(input.vacancyRate * 100).toFixed(1)}%`)}
+          ${planRow('実効月額家賃',  fmt(result.effectiveMonthlyRent))}
+          ${planRow('表面利回り',    `${(result.ratios.grossYield * 100).toFixed(2)}%`)}
+          ${planRow('実質利回り',    `${(result.ratios.netYield * 100).toFixed(2)}%`)}
+        </div>
+
+        <!-- Equity ratio bar -->
+        <div style="margin-top:20px;background:${LIGHT};padding:14px;border-left:3px solid ${BLACK};">
+          <div style="font-size:9px;letter-spacing:0.14em;color:${GRAY};
+            text-transform:uppercase;margin-bottom:8px;">自己資金比率</div>
+          <div style="display:flex;height:6px;width:100%;">
+            <div style="width:${equityPct}%;background:${BLACK};"></div>
+            <div style="width:${loanPct}%;background:#CCCCCC;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;">
+            <span style="color:${BLACK};font-weight:600;">自己資金 ${equityPct}%&ensp;${fmtM(input.equity)}</span>
+            <span style="color:${GRAY};">借入 ${loanPct}%&ensp;${fmtM(loanAmount)}</span>
+          </div>
+        </div>
+      </div>
     </div>
+
+    ${pageFooter()}
   `;
+
+  return pageWrap(content, 'portrait');
 }
