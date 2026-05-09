@@ -78,6 +78,9 @@ export function BatchPrintModal({ open, onClose }: BatchPrintModalProps) {
     }
 
     for (const { result, label } of patterns) {
+      // Guard: skip if result or result.input is missing (stale store data)
+      if (!result?.input) continue;
+
       for (const def of SECTION_DEFS) {
         if (!selectedSections.has(def.key)) continue;
 

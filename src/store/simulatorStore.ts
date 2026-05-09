@@ -41,6 +41,17 @@ export const useSimStore = create<SimStore>()(
     }),
     {
       name: 'mas-sim-store',
+      version: 2,
+      migrate: (persistedState: unknown) => {
+        // Strip any stale computed fields (resultA/resultB) from old localStorage versions.
+        // Old versions stored the full SimResult which may lack the `input` field.
+        const s = (persistedState as Record<string, unknown>) ?? {};
+        return {
+          inputA: s.inputA,
+          inputB: s.inputB,
+          activePattern: s.activePattern ?? 'A',
+        };
+      },
       partialize: (state) => ({
         inputA: state.inputA,
         inputB: state.inputB,

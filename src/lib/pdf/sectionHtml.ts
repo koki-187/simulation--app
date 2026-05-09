@@ -226,6 +226,7 @@ function pageWrap(content: string, orientation: 'portrait' | 'landscape' = 'port
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function coverHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const input      = result.input;
   const loanAmount = result.loanAmount;
   const grossYield = ((result.ratios?.grossYield ?? 0) * 100).toFixed(2);
@@ -352,6 +353,7 @@ export function coverHtml(result: SimResult, patternLabel: string): string {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function cashflowSectionHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const rows  = result.cashFlows;
   const input = result.input;
 
@@ -423,6 +425,7 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function amortizationSectionHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const rows  = result.amortization;
   const input = result.input;
 
@@ -513,6 +516,7 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function saleSectionHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const input     = result.input;
   const scenarios = result.saleScenarios;
 
@@ -600,6 +604,7 @@ export function saleSectionHtml(result: SimResult, patternLabel: string): string
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function taxSectionHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const t     = result.taxDetail;
   const input = result.input;
 
@@ -703,6 +708,7 @@ export function taxSectionHtml(result: SimResult, patternLabel: string): string 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function ratiosSectionHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const r     = result.ratios ?? {} as typeof result.ratios;
   const input = result.input;
 
@@ -801,6 +807,7 @@ export function ratiosSectionHtml(result: SimResult, patternLabel: string): stri
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function fundingPlanSectionHtml(result: SimResult, patternLabel: string): string {
+  if (!result?.input) return '';
   const input      = result.input;
   const totalFunds = input.propertyPrice + input.expenses;
   const loanAmount = result.loanAmount;
