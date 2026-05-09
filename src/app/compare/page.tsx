@@ -160,21 +160,23 @@ export default function ComparePage() {
       <div className="p-6 space-y-6">
         {/* Score cards */}
         <div className="flex gap-4">
-          <div className={`flex-1 rounded-xl p-4 text-center border-2 ${aWins >= bWins ? 'bg-orange-50 border-orange-500' : 'bg-neutral-50 border-neutral-200'}`}>
+          <div className={`flex-1 rounded-xl p-4 text-center border-2 transition-all ${aWins > bWins ? 'bg-orange-50 border-orange-500 shadow-md' : aWins === bWins ? 'bg-orange-50 border-orange-300' : 'bg-neutral-50 border-neutral-200'}`}>
+            {aWins > bWins && <div className="text-2xl mb-1">🏆</div>}
             <div className="text-xs font-bold text-orange-500 mb-1">パターンA — {inputA.propertyName}</div>
-            <div className={`text-3xl font-bold ${aWins >= bWins ? 'text-orange-500' : 'text-navy-500'}`}>{aWins}</div>
-            <div className="text-xs text-neutral-500">指標でリード</div>
+            <div className={`text-4xl font-black ${aWins >= bWins ? 'text-orange-500' : 'text-navy-500'}`}>{aWins}</div>
+            <div className="text-xs text-neutral-500 mt-0.5">/ {rows.length} 指標でリード</div>
           </div>
-          <div className={`flex-1 rounded-xl p-4 text-center border-2 ${bWins > aWins ? 'bg-orange-50 border-orange-500' : 'bg-neutral-50 border-neutral-200'}`}>
-            <div className="text-xs font-bold text-orange-300 mb-1">パターンB — {inputB.propertyName}</div>
-            <div className={`text-3xl font-bold ${bWins > aWins ? 'text-orange-500' : 'text-navy-500'}`}>{bWins}</div>
-            <div className="text-xs text-neutral-500">指標でリード</div>
+          <div className={`flex-1 rounded-xl p-4 text-center border-2 transition-all ${bWins > aWins ? 'bg-orange-50 border-orange-500 shadow-md' : 'bg-neutral-50 border-neutral-200'}`}>
+            {bWins > aWins && <div className="text-2xl mb-1">🏆</div>}
+            <div className="text-xs font-bold text-navy-500 mb-1">パターンB — {inputB.propertyName}</div>
+            <div className={`text-4xl font-black ${bWins > aWins ? 'text-orange-500' : 'text-navy-500'}`}>{bWins}</div>
+            <div className="text-xs text-neutral-500 mt-0.5">/ {rows.length} 指標でリード</div>
           </div>
         </div>
 
         {/* Insight text */}
-        <div className={`rounded-xl px-4 py-3 text-sm font-medium border ${aWins !== bWins ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-neutral-50 border-neutral-200 text-neutral-600'}`}>
-          💡 {insightText}
+        <div className={`rounded-xl px-5 py-4 text-sm font-semibold border-l-4 ${aWins !== bWins ? 'bg-orange-50 border-l-orange-500 border border-orange-200 text-orange-800' : 'bg-neutral-50 border-l-neutral-400 border border-neutral-200 text-neutral-700'}`}>
+          <span className="mr-2">{aWins !== bWins ? '🏆' : '🤝'}</span>{insightText}
         </div>
 
         {/* Radar chart */}
@@ -201,8 +203,12 @@ export default function ComparePage() {
             <thead>
               <tr className="bg-neutral-50 border-b border-neutral-200">
                 <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-neutral-600">指標</th>
-                <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-orange-500">パターンA</th>
-                <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-navy-500">パターンB</th>
+                <th scope="col" className={`px-4 py-2.5 text-right text-xs font-bold ${aWins >= bWins ? 'text-orange-500' : 'text-neutral-500'}`}>
+                  {aWins > bWins ? '🏆 ' : ''}パターンA
+                </th>
+                <th scope="col" className={`px-4 py-2.5 text-right text-xs font-bold ${bWins > aWins ? 'text-orange-500' : 'text-neutral-500'}`}>
+                  {bWins > aWins ? '🏆 ' : ''}パターンB
+                </th>
                 <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-neutral-500">優位</th>
               </tr>
             </thead>

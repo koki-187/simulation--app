@@ -128,7 +128,7 @@ function pageHeader(propertyName: string, patternLabel: string): string {
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-end;
       padding-bottom:10px;border-bottom:1px solid ${BLACK};margin-bottom:32px;">
-      <div style="font-family:${F_EN};font-size:12px;font-weight:300;
+      <div style="font-family:${F_EN};font-size:12px;font-weight:600;
         letter-spacing:0.45em;color:${BLACK};">MAS</div>
       <div style="font-size:9px;color:${GRAY};letter-spacing:0.12em;text-align:center;">
         ${esc(propertyName)}&ensp;/&ensp;${esc(patternLabel)}
@@ -142,7 +142,7 @@ function pageHeader(propertyName: string, patternLabel: string): string {
 function sectionHeading(enTitle: string, jaTitle: string): string {
   return `
     <div style="margin-bottom:28px;">
-      <div style="font-family:${F_EN};font-size:30px;font-weight:200;
+      <div style="font-family:${F_EN};font-size:30px;font-weight:400;
         color:${BLACK};letter-spacing:0.04em;line-height:1;">${enTitle}</div>
       <div style="font-family:${F_JA};font-size:13px;font-weight:500;
         color:${BLACK};letter-spacing:0.35em;margin-top:8px;">${jaTitle}</div>
@@ -175,14 +175,14 @@ function kpiBlock(items: { enLabel: string; value: string; sub: string }[]): str
 
 /** Table TH */
 function th(text: string, align: 'left' | 'right' | 'center' = 'right', width?: string): string {
-  return `<th style="padding:9px 12px;border:1px solid ${BLACK};text-align:${align};
-    font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.14em;
+  return `<th style="padding:9px 12px;border-right:1px solid rgba(255,255,255,0.18);border-bottom:2px solid rgba(255,255,255,0.08);text-align:${align};
+    font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;
     text-transform:uppercase;${width ? `width:${width};` : ''}">${text}</th>`;
 }
 
 /** Table TD — normal row */
 function td(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
-  return `<td style="padding:8px 12px;border:1px solid ${LIGHT};
+  return `<td style="padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);
     text-align:${align};font-size:11px;${extra}">${content}</td>`;
 }
 
@@ -252,6 +252,9 @@ export function coverHtml(result: SimResult, patternLabel: string): string {
     </div>
   `).join('');
 
+  // Large background ornament number
+  const ornamentPrice = Math.round(input.propertyPrice / 10000).toLocaleString('ja-JP');
+
   return `
     <div style="font-family:${F};background:${BLACK};width:794px;min-height:1123px;
       position:relative;overflow:hidden;box-sizing:border-box;">
@@ -259,49 +262,65 @@ export function coverHtml(result: SimResult, patternLabel: string): string {
       ${gridOverlay(794, 1123)}
       ${cornerMarks(28)}
 
+      <!-- Left vertical accent bar -->
+      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;
+        background:rgba(255,255,255,0.45);z-index:2;"></div>
+
+      <!-- Background ornament: giant price number -->
+      <div style="position:absolute;right:-40px;bottom:160px;
+        font-family:${F_EN};font-size:320px;font-weight:700;
+        color:rgba(255,255,255,0.03);letter-spacing:-0.06em;line-height:1;
+        pointer-events:none;user-select:none;z-index:0;white-space:nowrap;">
+        ${ornamentPrice}
+      </div>
+
       <!-- Upper content area -->
-      <div style="padding:100px 83px 0;position:relative;z-index:1;">
+      <div style="padding:100px 83px 0 86px;position:relative;z-index:1;">
 
         <!-- Report type label -->
-        <div style="font-family:${F_EN};font-size:9px;font-weight:400;letter-spacing:0.35em;
-          color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:56px;">
+        <div style="font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.40em;
+          color:rgba(255,255,255,0.28);text-transform:uppercase;margin-bottom:64px;
+          display:flex;align-items:center;gap:16px;">
+          <div style="width:24px;height:1px;background:rgba(255,255,255,0.22);flex-shrink:0;"></div>
           REAL ESTATE INVESTMENT SIMULATION REPORT
         </div>
 
-        <!-- Property name -->
-        <div style="font-family:${F_EN};font-size:40px;font-weight:300;color:${WHITE};
-          letter-spacing:0.02em;line-height:1.2;margin-bottom:12px;">
+        <!-- Property name — Hero typography -->
+        <div style="font-family:${F_EN};font-size:68px;font-weight:200;color:${WHITE};
+          letter-spacing:-0.02em;line-height:0.95;margin-bottom:20px;
+          word-break:break-word;">
           ${esc(input.propertyName)}
         </div>
 
-        <!-- Pattern badge -->
-        <div style="display:inline-block;border:1px solid rgba(255,255,255,0.30);
-          padding:5px 14px;margin-bottom:8px;">
-          <span style="font-family:${F_EN};font-size:9px;font-weight:400;letter-spacing:0.25em;
-            color:rgba(255,255,255,0.60);">${esc(patternLabel).toUpperCase()}</span>
+        <!-- Pattern badge + property meta row -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:80px;">
+          <div style="display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,0.25);
+            padding:5px 16px;">
+            <span style="font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.28em;
+              color:rgba(255,255,255,0.55);">${esc(patternLabel).toUpperCase()}</span>
+          </div>
+          <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);flex-shrink:0;"></div>
+          <div style="font-family:${F_JA};font-size:11px;color:rgba(255,255,255,0.32);
+            letter-spacing:0.08em;">
+            ${esc(input.propertyType)}${input.location ? `&ensp;—&ensp;${esc(input.location)}` : ''}
+          </div>
         </div>
 
-        <!-- Property meta -->
-        <div style="font-family:${F_JA};font-size:11px;color:rgba(255,255,255,0.35);
-          margin-bottom:72px;letter-spacing:0.06em;">
-          ${esc(input.propertyType)}${input.location ? `&ensp;—&ensp;${esc(input.location)}` : ''}
-        </div>
+        <!-- Separator line -->
+        <div style="width:100%;height:1px;background:rgba(255,255,255,0.10);margin-bottom:40px;"></div>
 
-        <!-- Thin separator -->
-        <div style="width:100%;height:1px;background:rgba(255,255,255,0.12);margin-bottom:36px;"></div>
-
-        <!-- Metrics grid (3×2) -->
+        <!-- Metrics grid (2 rows × 3 cols) -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:0;">
           ${metricCells}
         </div>
 
-        <!-- Second row separator -->
-        <div style="width:100%;height:1px;background:rgba(255,255,255,0.12);margin-top:32px;"></div>
+        <!-- Second separator -->
+        <div style="width:100%;height:1px;background:rgba(255,255,255,0.10);margin-top:40px;"></div>
       </div>
 
       <!-- Bottom strip: property details -->
       <div style="position:absolute;bottom:0;left:0;right:0;
-        border-top:1px solid rgba(255,255,255,0.10);padding:28px 83px;z-index:1;">
+        border-top:1px solid rgba(255,255,255,0.08);padding:28px 83px 28px 86px;z-index:1;">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:24px;">
           ${[
             ['INTEREST RATE', '金利', `${(input.rate * 100).toFixed(2)}%`],
@@ -309,19 +328,19 @@ export function coverHtml(result: SimResult, patternLabel: string): string {
             ['VACANCY',       '空室率',   `${(input.vacancyRate * 100).toFixed(1)}%`],
             ['HOLDING',       '保有期間', `${input.holdingYears}年`],
           ].map(([en, ja, val]) => `
-            <div style="border-right:1px solid rgba(255,255,255,0.08);padding:0 16px 0 0;margin-right:16px;">
-              <div style="font-family:${F_EN};font-size:8px;letter-spacing:0.18em;
-                color:rgba(255,255,255,0.28);text-transform:uppercase;">${en}</div>
-              <div style="font-family:${F_JA};font-size:9px;color:rgba(255,255,255,0.28);margin-top:2px;">${ja}</div>
-              <div style="font-family:${F_EN};font-size:14px;font-weight:300;
-                color:rgba(255,255,255,0.70);margin-top:6px;">${val}</div>
+            <div style="border-right:1px solid rgba(255,255,255,0.06);padding:0 16px 0 0;margin-right:16px;">
+              <div style="font-family:${F_EN};font-size:8px;letter-spacing:0.20em;
+                color:rgba(255,255,255,0.25);text-transform:uppercase;">${en}</div>
+              <div style="font-family:${F_JA};font-size:9px;color:rgba(255,255,255,0.25);margin-top:2px;">${ja}</div>
+              <div style="font-family:${F_EN};font-size:16px;font-weight:300;
+                color:rgba(255,255,255,0.72);margin-top:8px;letter-spacing:0.02em;">${val}</div>
             </div>
           `).join('')}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-family:${F_EN};font-size:8px;letter-spacing:0.3em;
-            color:rgba(255,255,255,0.20);">MAS — MY AGENT SIMULATION</div>
-          <div style="font-size:8px;color:rgba(255,255,255,0.20);letter-spacing:0.08em;">${today()}</div>
+          <div style="font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.40em;
+            color:rgba(255,255,255,0.18);">MAS — MY AGENT SIMULATION</div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.18);letter-spacing:0.08em;">${today()}</div>
         </div>
       </div>
     </div>

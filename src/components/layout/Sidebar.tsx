@@ -52,12 +52,12 @@ export const Sidebar = memo(function Sidebar({
   return (
     <aside className="w-56 h-screen bg-navy-500 flex flex-col shrink-0 overflow-hidden">
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-navy-600">
+      <div className="px-4 py-5 border-b border-navy-600">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/mas-logo-horizontal.png"
-          alt="MAS - My Agent Simuration"
-          className="h-10 w-auto object-contain max-w-full"
+          alt="MAS - My Agent Simulation"
+          className="h-14 w-auto object-contain max-w-full"
           onError={(e) => {
             const el = e.currentTarget as HTMLImageElement;
             el.style.display = 'none';
@@ -67,8 +67,8 @@ export const Sidebar = memo(function Sidebar({
         />
         {/* Fallback text (hidden when logo loads) */}
         <div className="hidden">
-          <div className="text-white font-bold text-xl tracking-widest leading-tight">MAS</div>
-          <div className="text-navy-100 text-xs mt-0.5">My Agent Simuration</div>
+          <div className="text-white font-black text-2xl tracking-[0.25em] leading-tight">MAS</div>
+          <div className="text-orange-400 text-[10px] font-semibold tracking-widest mt-1 uppercase">My Agent Simulation</div>
         </div>
       </div>
 
