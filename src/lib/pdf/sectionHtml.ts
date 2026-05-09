@@ -228,8 +228,8 @@ function pageWrap(content: string, orientation: 'portrait' | 'landscape' = 'port
 export function coverHtml(result: SimResult, patternLabel: string): string {
   const input      = result.input;
   const loanAmount = result.loanAmount;
-  const grossYield = (result.ratios.grossYield * 100).toFixed(2);
-  const netYield   = (result.ratios.netYield * 100).toFixed(2);
+  const grossYield = ((result.ratios?.grossYield ?? 0) * 100).toFixed(2);
+  const netYield   = ((result.ratios?.netYield ?? 0) * 100).toFixed(2);
   const monthly    = Math.round(result.monthlyPayment).toLocaleString('ja-JP');
   const rent       = Math.round(result.effectiveMonthlyRent).toLocaleString('ja-JP');
 
@@ -703,7 +703,7 @@ export function taxSectionHtml(result: SimResult, patternLabel: string): string 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function ratiosSectionHtml(result: SimResult, patternLabel: string): string {
-  const r     = result.ratios;
+  const r     = result.ratios ?? {} as typeof result.ratios;
   const input = result.input;
 
   interface RatioItem {
@@ -872,8 +872,8 @@ export function fundingPlanSectionHtml(result: SimResult, patternLabel: string):
           ${planRow('月額家賃収入',  fmt(input.monthlyRent))}
           ${planRow('空室率',        `${(input.vacancyRate * 100).toFixed(1)}%`)}
           ${planRow('実効月額家賃',  fmt(result.effectiveMonthlyRent))}
-          ${planRow('表面利回り',    `${(result.ratios.grossYield * 100).toFixed(2)}%`)}
-          ${planRow('実質利回り',    `${(result.ratios.netYield * 100).toFixed(2)}%`)}
+          ${planRow('表面利回り',    `${((result.ratios?.grossYield ?? 0) * 100).toFixed(2)}%`)}
+          ${planRow('実質利回り',    `${((result.ratios?.netYield ?? 0) * 100).toFixed(2)}%`)}
         </div>
 
         <!-- Equity ratio bar -->
