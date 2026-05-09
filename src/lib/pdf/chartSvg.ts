@@ -94,7 +94,7 @@ export function cashflowBarChartSvg(rows: CFRow[], options?: { svgHeight?: numbe
 
   return `<div style="margin-bottom:${mb}px;">`
     + `<div style="font-size:9px;font-weight:500;letter-spacing:0.18em;color:${GRAY};text-transform:uppercase;margin-bottom:10px;font-family:Inter,'Helvetica Neue',sans-serif;">ANNUAL CASH FLOW  万円</div>`
-    + `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">`
+    + `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="max-width:${W}px;width:100%;height:auto;display:block;">`
     + `<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${GRAY}" stroke-width="1.5"/></pattern></defs>`
     + yLines
     + `<line x1="${mL}" y1="${mT}" x2="${mL}" y2="${mT + cH}" stroke="${GRAY}" stroke-width="0.5"/>`
@@ -159,7 +159,7 @@ export function radarChartSvg(
 
   return `<div style="margin-bottom:20px;">`
     + `<div style="font-size:9px;font-weight:500;letter-spacing:0.18em;color:${GRAY};text-transform:uppercase;margin-bottom:10px;font-family:Inter,'Helvetica Neue',sans-serif;">PERFORMANCE RADAR  0–100</div>`
-    + `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">`
+    + `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="max-width:${W}px;width:100%;height:auto;display:block;">`
     + gridPolygons + axisLines + axisLabels
     + `<polygon points="${polyB}" fill="${GRAY}" fill-opacity="0.10" stroke="${GRAY}" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="4 2"/>`
     + `<polygon points="${polyA}" fill="${BLACK}" fill-opacity="0.08" stroke="${BLACK}" stroke-width="2" stroke-linejoin="round"/>`

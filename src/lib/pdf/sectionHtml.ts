@@ -371,7 +371,7 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
   );
 
   const tdc = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
-    `<td style="padding:5px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
+    `<td style="padding:3px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
 
   const tableRows = keyRows.map((r: CFRow, i: number) => {
     const bg     = i % 2 === 0 ? WHITE : LIGHT;
@@ -424,7 +424,7 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
       `).join('')}
     </div>
 
-    ${cashflowBarChartSvg(rows, { svgHeight: 105, marginBottom: 10 })}
+    ${cashflowBarChartSvg(rows, { svgHeight: 80, marginBottom: 8 })}
 
     <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:8px;">
       <thead>
@@ -483,9 +483,9 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
     : annualRows.filter(r => r.year === 1 || r.year % 5 === 0 || r.year === input.holdingYears);
 
   const tda = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
-    `<td style="padding:5px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
+    `<td style="padding:3px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
   const tdaHL = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
-    `<td style="padding:5px 10px;border:1px solid ${BLACK};text-align:${align};font-size:10.5px;color:${WHITE};${extra}">${content}</td>`;
+    `<td style="padding:3px 10px;border:1px solid ${BLACK};text-align:${align};font-size:10.5px;color:${WHITE};${extra}">${content}</td>`;
 
   const tableRows = displayRows.map((r, i) => {
     const isLast = r.year === input.holdingYears;
