@@ -78,12 +78,12 @@ function fmt(n: number): string {
   return '¥' + Math.round(n).toLocaleString('ja-JP');
 }
 
-/** X.X万円 */
+/** X,XXX万円 / X.XX億円 */
 function fmtM(n: number): string {
   const man = Math.round(n) / 10000;
   if (man >= 10000) return `${(man / 10000).toFixed(2)}億円`;
-  if (man >= 1000)  return `${(man / 1000).toFixed(2)}千万円`;
-  return `${man.toFixed(1)}万円`;
+  if (man >= 1)     return `${Math.round(man).toLocaleString('ja-JP')}万円`;
+  return `${Math.round(n).toLocaleString('ja-JP')}円`;
 }
 
 /** Today in ja-JP */
@@ -361,60 +361,94 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
   const lastRow  = rows[rows.length - 1];
   const annualRent = firstRow ? Math.round(firstRow.rentalIncome) : 0;
   const annualLoan = firstRow ? Math.round(firstRow.annualLoanPayment) : 0;
-  const firstCF   = firstRow ? Math.round(firstRow.afterTaxCF) : 0;
   const cumulCF   = lastRow  ? Math.round(lastRow.cumulativeCF) : 0;
 
   const signStr = (n: number) => n >= 0 ? fmt(n) : `△ ${fmt(Math.abs(n))}`;
 
-  const tableRows = rows.map((r: CFRow, i: number) => {
-    const isHL = false; // no color highlight in monochrome — use weight instead
-    const bg   = i % 2 === 0 ? WHITE : LIGHT;
+  // Filter to key years (year 1 + every 5th year + final year) — matches chart subset
+  const keyRows = rows.filter((r: CFRow) =>
+    r.year === 1 || r.year % 5 === 0 || r.year === input.holdingYears
+  );
+
+  const tdc = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
+    `<td style="padding:5px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
+
+  const tableRows = keyRows.map((r: CFRow, i: number) => {
+    const bg     = i % 2 === 0 ? WHITE : LIGHT;
     const cfBold = r.afterTaxCF < 0 ? 'font-weight:600;' : 'font-weight:700;';
     return `
       <tr style="background:${bg};">
-        ${td(`${r.year}`, 'center', 'font-weight:600;font-family:Inter,sans-serif;')}
-        ${td(fmt(r.rentalIncome))}
-        ${td(fmt(r.managementCosts))}
-        ${td(fmt(r.operatingCF), 'right', r.operatingCF < 0 ? 'font-weight:600;' : '')}
-        ${td(fmt(r.annualLoanPayment))}
-        ${td(r.incomeTax > 0 ? fmt(r.incomeTax) : '—')}
-        ${td(signStr(r.afterTaxCF), 'right', cfBold)}
-        ${td(signStr(r.cumulativeCF), 'right', r.cumulativeCF < 0 ? 'font-weight:700;' : 'font-weight:700;')}
-        ${td(fmt(r.loanBalance), 'right', `color:${GRAY};`)}
+        ${tdc(`${r.year}`, 'center', 'font-weight:600;font-family:Inter,sans-serif;')}
+        ${tdc(fmt(r.rentalIncome))}
+        ${tdc(fmt(r.managementCosts))}
+        ${tdc(fmt(r.operatingCF), 'right', r.operatingCF < 0 ? 'font-weight:600;' : '')}
+        ${tdc(fmt(r.annualLoanPayment))}
+        ${tdc(r.incomeTax > 0 ? fmt(r.incomeTax) : '—')}
+        ${tdc(signStr(r.afterTaxCF), 'right', cfBold)}
+        ${tdc(signStr(r.cumulativeCF), 'right', 'font-weight:700;')}
+        ${tdc(fmt(r.loanBalance), 'right', `color:${GRAY};`)}
       </tr>
     `;
   }).join('');
 
+  // Compact layout tuned to fit A4 landscape (794px height, 91px V-padding = 612px content)
   const content = `
-    ${pageHeader(input.propertyName, patternLabel)}
-    ${sectionHeading('CASH FLOW ANALYSIS', 'キャッシュフロー分析')}
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;
+      padding-bottom:8px;border-bottom:1px solid ${BLACK};margin-bottom:14px;">
+      <div style="font-family:${F_EN};font-size:12px;font-weight:600;letter-spacing:0.45em;color:${BLACK};">MAS</div>
+      <div style="font-size:9px;color:${GRAY};letter-spacing:0.12em;">
+        ${esc(input.propertyName)}&ensp;/&ensp;${esc(patternLabel)}
+      </div>
+      <div style="font-size:9px;color:${GRAY};letter-spacing:0.08em;">${today()}</div>
+    </div>
 
-    ${kpiBlock([
-      { enLabel: 'Annual Rent',    value: fmt(annualRent), sub: '1年目 年間家賃収入' },
-      { enLabel: 'Loan Payment',   value: fmt(annualLoan), sub: '1年目 年間ローン返済' },
-      { enLabel: `${input.holdingYears}Y Cum. CF`, value: signStr(cumulCF), sub: `${input.holdingYears}年間 税引後累計CF` },
-    ])}
+    <div style="margin-bottom:12px;">
+      <div style="font-family:${F_EN};font-size:26px;font-weight:400;color:${BLACK};letter-spacing:0.04em;line-height:1;">CASH FLOW ANALYSIS</div>
+      <div style="font-family:${F_JA};font-size:12px;font-weight:500;color:${BLACK};letter-spacing:0.35em;margin-top:6px;">キャッシュフロー分析</div>
+      <div style="width:32px;height:2px;background:${BLACK};margin-top:8px;"></div>
+    </div>
 
-    ${cashflowBarChartSvg(rows)}
+    <div style="border-top:2px solid ${BLACK};border-bottom:2px solid ${BLACK};
+      padding:12px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:12px;">
+      ${[
+        { enLabel: 'Annual Rent',    value: fmt(annualRent), sub: '1年目 年間家賃収入' },
+        { enLabel: 'Loan Payment',   value: fmt(annualLoan), sub: '1年目 年間ローン返済' },
+        { enLabel: `${input.holdingYears}Y Cum. CF`, value: signStr(cumulCF), sub: `${input.holdingYears}年間 税引後累計CF` },
+      ].map((item, i, arr) => `
+        <div style="padding:0 ${i < arr.length - 1 ? '20px' : '0'} 0 ${i > 0 ? '20px' : '0'};
+          ${i < arr.length - 1 ? `border-right:1px solid ${LIGHT};` : ''}">
+          <div style="font-family:${F_EN};font-size:9px;font-weight:500;letter-spacing:0.18em;color:${GRAY};text-transform:uppercase;">${item.enLabel}</div>
+          <div style="font-family:${F_EN};font-size:22px;font-weight:200;color:${BLACK};margin-top:6px;line-height:1;">${item.value}</div>
+          <div style="font-size:9px;color:${GRAY};margin-top:4px;font-family:${F_JA};">${item.sub}</div>
+        </div>
+      `).join('')}
+    </div>
 
-    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">
+    ${cashflowBarChartSvg(rows, { svgHeight: 105, marginBottom: 10 })}
+
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:8px;">
       <thead>
         <tr style="background:${BLACK};color:${WHITE};">
-          ${th('年', 'center', '36px')}
-          ${th('家賃収入')}
-          ${th('運営費')}
-          ${th('運営CF')}
-          ${th('ローン返済')}
-          ${th('税金')}
-          ${th('税引後CF')}
-          ${th('累計CF')}
-          ${th('残債')}
+          <th style="padding:7px 10px;text-align:center;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;width:36px;">年</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">家賃収入</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">運営費</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">運営CF</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">ローン返済</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">税金</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">税引後CF</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">累計CF</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">残債</th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
     </table>
+    <div style="font-size:8px;color:${GRAY};margin-bottom:8px;">※ 1年目・5年毎・最終年のデータを表示</div>
 
-    ${pageFooter()}
+    <div style="margin-top:8px;border-top:1px solid ${GRAY};padding-top:6px;
+      display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-family:${F_EN};font-size:8px;color:${GRAY};letter-spacing:0.18em;">MAS — MY AGENT SIMULATION</div>
+      <div style="font-size:8px;color:${GRAY};">※本資料は試算概算値であり、投資助言ではありません。</div>
+    </div>
   `;
 
   return pageWrap(content, 'landscape');
@@ -443,10 +477,20 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
 
   const totalInterest = annualRows[annualRows.length - 1]?.cumInterest ?? result.totalInterest;
 
-  const tableRows = annualRows.map((r, i) => {
-    const isLast = i === annualRows.length - 1;
+  // For long holds (>20 yr), filter to key years so the table fits on one A4 portrait page
+  const displayRows = annualRows.length <= 20
+    ? annualRows
+    : annualRows.filter(r => r.year === 1 || r.year % 5 === 0 || r.year === input.holdingYears);
+
+  const tda = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
+    `<td style="padding:5px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
+  const tdaHL = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
+    `<td style="padding:5px 10px;border:1px solid ${BLACK};text-align:${align};font-size:10.5px;color:${WHITE};${extra}">${content}</td>`;
+
+  const tableRows = displayRows.map((r, i) => {
+    const isLast = r.year === input.holdingYears;
     const bg = isLast ? BLACK : (i % 2 === 0 ? WHITE : LIGHT);
-    const Cell = isLast ? tdHL : td;
+    const Cell = isLast ? tdaHL : tda;
     return `
       <tr style="background:${bg};">
         ${Cell(`${r.year}`, 'center', 'font-weight:700;font-family:Inter,sans-serif;')}
@@ -469,19 +513,20 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
       { enLabel: 'Total Interest',value: fmtM(totalInterest),         sub: `${input.holdingYears}年間 累計利息` },
     ])}
 
-    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;">
+    <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:12px;">
       <thead>
         <tr style="background:${BLACK};color:${WHITE};">
-          ${th('年', 'center', '36px')}
-          ${th('年間返済額')}
-          ${th('うち利息')}
-          ${th('うち元金')}
-          ${th('期末残高')}
-          ${th('累計利息')}
+          <th style="padding:7px 10px;text-align:center;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;width:36px;">年</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">年間返済額</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">うち利息</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">うち元金</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">期末残高</th>
+          <th style="padding:7px 10px;text-align:right;font-family:${F_EN};font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;">累計利息</th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
     </table>
+    ${annualRows.length > 20 ? `<div style="font-size:8px;color:${GRAY};margin-bottom:8px;">※ 1年目・5年毎・最終年のデータを表示（${input.holdingYears}年分）</div>` : ''}
 
     <!-- Mini bar: loan vs interest ratio -->
     <div style="background:${LIGHT};padding:14px 18px;display:flex;align-items:center;gap:20px;">

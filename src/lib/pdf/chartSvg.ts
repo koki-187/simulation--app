@@ -17,7 +17,7 @@ const LIGHT  = '#F7F7F7';
  * Filters to year 1 and every 5th year to keep the chart readable.
  * Two bars per group: solid black (operatingCF) + hatched gray (afterTaxCF).
  */
-export function cashflowBarChartSvg(rows: CFRow[]): string {
+export function cashflowBarChartSvg(rows: CFRow[], options?: { svgHeight?: number; marginBottom?: number }): string {
   const data = rows
     .filter(r => r.year === 1 || r.year % 5 === 0)
     .map(r => ({
@@ -28,7 +28,7 @@ export function cashflowBarChartSvg(rows: CFRow[]): string {
 
   if (data.length === 0) return '';
 
-  const W = 660, H = 190;
+  const W = 660, H = options?.svgHeight ?? 190;
   const mL = 72, mR = 16, mT = 12, mB = 40;
   const cW = W - mL - mR;
   const cH = H - mT - mB;
@@ -90,8 +90,9 @@ export function cashflowBarChartSvg(rows: CFRow[]): string {
   }).join('');
 
   const legY = mT + cH + 28;
+  const mb = options?.marginBottom ?? 20;
 
-  return `<div style="margin-bottom:20px;">`
+  return `<div style="margin-bottom:${mb}px;">`
     + `<div style="font-size:9px;font-weight:500;letter-spacing:0.18em;color:${GRAY};text-transform:uppercase;margin-bottom:10px;font-family:Inter,'Helvetica Neue',sans-serif;">ANNUAL CASH FLOW  万円</div>`
     + `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">`
     + `<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${GRAY}" stroke-width="1.5"/></pattern></defs>`
