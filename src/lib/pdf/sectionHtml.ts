@@ -394,7 +394,7 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
   // Compact layout tuned to fit A4 landscape (794px height, 91px V-padding = 612px content)
   const content = `
     <div style="display:flex;justify-content:space-between;align-items:flex-end;
-      padding-bottom:8px;border-bottom:1px solid ${BLACK};margin-bottom:14px;">
+      padding-bottom:8px;border-bottom:1px solid ${BLACK};margin-bottom:8px;">
       <div style="font-family:${F_EN};font-size:12px;font-weight:600;letter-spacing:0.45em;color:${BLACK};">MAS</div>
       <div style="font-size:9px;color:${GRAY};letter-spacing:0.12em;">
         ${esc(input.propertyName)}&ensp;/&ensp;${esc(patternLabel)}
@@ -402,14 +402,14 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
       <div style="font-size:9px;color:${GRAY};letter-spacing:0.08em;">${today()}</div>
     </div>
 
-    <div style="margin-bottom:12px;">
+    <div style="margin-bottom:6px;">
       <div style="font-family:${F_EN};font-size:26px;font-weight:400;color:${BLACK};letter-spacing:0.04em;line-height:1;">CASH FLOW ANALYSIS</div>
       <div style="font-family:${F_JA};font-size:12px;font-weight:500;color:${BLACK};letter-spacing:0.35em;margin-top:6px;">キャッシュフロー分析</div>
       <div style="width:32px;height:2px;background:${BLACK};margin-top:8px;"></div>
     </div>
 
     <div style="border-top:2px solid ${BLACK};border-bottom:2px solid ${BLACK};
-      padding:12px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:12px;">
+      padding:12px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:10px;">
       ${[
         { enLabel: 'Annual Rent',    value: fmt(annualRent), sub: '1年目 年間家賃収入' },
         { enLabel: 'Loan Payment',   value: fmt(annualLoan), sub: '1年目 年間ローン返済' },
