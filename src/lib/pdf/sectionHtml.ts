@@ -192,6 +192,16 @@ function tdHL(content: string, align: 'left' | 'right' | 'center' = 'right', ext
     text-align:${align};font-size:11px;color:${WHITE};${extra}">${content}</td>`;
 }
 
+/** Table TD — compact normal row (3px 10px padding, 10.5px font) */
+function tdCompact(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
+  return `<td style="padding:3px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
+}
+
+/** Table TD — compact highlight row (black bg white text) */
+function tdCompactHL(content: string, align: 'left' | 'right' | 'center' = 'right', extra = ''): string {
+  return `<td style="padding:3px 10px;border:1px solid ${BLACK};text-align:${align};font-size:10.5px;color:${WHITE};${extra}">${content}</td>`;
+}
+
 /** Page footer */
 function pageFooter(): string {
   return `
@@ -370,23 +380,20 @@ export function cashflowSectionHtml(result: SimResult, patternLabel: string): st
     r.year === 1 || r.year % 5 === 0 || r.year === input.holdingYears
   );
 
-  const tdc = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
-    `<td style="padding:3px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
-
   const tableRows = keyRows.map((r: CFRow, i: number) => {
     const bg     = i % 2 === 0 ? WHITE : LIGHT;
     const cfBold = r.afterTaxCF < 0 ? 'font-weight:600;' : 'font-weight:700;';
     return `
       <tr style="background:${bg};">
-        ${tdc(`${r.year}`, 'center', 'font-weight:600;font-family:Inter,sans-serif;')}
-        ${tdc(fmt(r.rentalIncome))}
-        ${tdc(fmt(r.managementCosts))}
-        ${tdc(fmt(r.operatingCF), 'right', r.operatingCF < 0 ? 'font-weight:600;' : '')}
-        ${tdc(fmt(r.annualLoanPayment))}
-        ${tdc(r.incomeTax > 0 ? fmt(r.incomeTax) : '—')}
-        ${tdc(signStr(r.afterTaxCF), 'right', cfBold)}
-        ${tdc(signStr(r.cumulativeCF), 'right', 'font-weight:700;')}
-        ${tdc(fmt(r.loanBalance), 'right', `color:${GRAY};`)}
+        ${tdCompact(`${r.year}`, 'center', 'font-weight:600;font-family:Inter,sans-serif;')}
+        ${tdCompact(fmt(r.rentalIncome))}
+        ${tdCompact(fmt(r.managementCosts))}
+        ${tdCompact(fmt(r.operatingCF), 'right', r.operatingCF < 0 ? 'font-weight:600;' : '')}
+        ${tdCompact(fmt(r.annualLoanPayment))}
+        ${tdCompact(r.incomeTax > 0 ? fmt(r.incomeTax) : '—')}
+        ${tdCompact(signStr(r.afterTaxCF), 'right', cfBold)}
+        ${tdCompact(signStr(r.cumulativeCF), 'right', 'font-weight:700;')}
+        ${tdCompact(fmt(r.loanBalance), 'right', `color:${GRAY};`)}
       </tr>
     `;
   }).join('');
@@ -482,15 +489,10 @@ export function amortizationSectionHtml(result: SimResult, patternLabel: string)
     ? annualRows
     : annualRows.filter(r => r.year === 1 || r.year % 5 === 0 || r.year === input.holdingYears);
 
-  const tda = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
-    `<td style="padding:3px 10px;border-bottom:1px solid rgba(0,0,0,0.09);border-right:1px solid rgba(0,0,0,0.06);text-align:${align};font-size:10.5px;${extra}">${content}</td>`;
-  const tdaHL = (content: string, align: 'left' | 'right' | 'center' = 'right', extra = '') =>
-    `<td style="padding:3px 10px;border:1px solid ${BLACK};text-align:${align};font-size:10.5px;color:${WHITE};${extra}">${content}</td>`;
-
   const tableRows = displayRows.map((r, i) => {
     const isLast = r.year === input.holdingYears;
     const bg = isLast ? BLACK : (i % 2 === 0 ? WHITE : LIGHT);
-    const Cell = isLast ? tdaHL : tda;
+    const Cell = isLast ? tdCompactHL : tdCompact;
     return `
       <tr style="background:${bg};">
         ${Cell(`${r.year}`, 'center', 'font-weight:700;font-family:Inter,sans-serif;')}
