@@ -1,4 +1,5 @@
 import { AmortRow } from './types';
+import { DEFAULT_BANK_OPTIONS } from './constants';
 
 /** PMT formula: monthly payment for a fixed-rate loan */
 export function calcPMT(annualRate: number, termYears: number, principal: number): number {
@@ -59,16 +60,18 @@ export function annualInterest(amort: AmortRow[], year: number): number {
 
 /** Bank comparison */
 export function calcBankOptions(loanAmount: number): import('./types').BankOption[] {
-  const banks = [
-    { name: '住信SBIネット銀行', rate: 0.0032, type: '変動' as const, termYears: 35 },
-    { name: 'auじぶん銀行',      rate: 0.00339, type: '変動' as const, termYears: 35 },
-    { name: 'イオン銀行',        rate: 0.0038, type: '変動' as const, termYears: 35 },
-    { name: 'みずほ銀行',        rate: 0.00375, type: '変動' as const, termYears: 35 },
-    { name: 'フラット35',        rate: 0.0182, type: '固定' as const, termYears: 35 },
-  ];
-  return banks.map(b => {
+  return DEFAULT_BANK_OPTIONS.map(b => {
     const monthly = calcPMT(b.rate, b.termYears, loanAmount);
     const total = monthly * b.termYears * 12;
-    return { ...b, monthlyPayment: monthly, totalPayment: total, totalInterest: total - loanAmount };
+    const type: '変動' | '固定' = b.label.includes('固定') ? '固定' : '変動';
+    return {
+      name: b.label,
+      rate: b.rate,
+      type,
+      termYears: b.termYears,
+      monthlyPayment: monthly,
+      totalPayment: total,
+      totalInterest: total - loanAmount,
+    };
   });
 }

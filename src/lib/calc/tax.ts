@@ -1,4 +1,5 @@
 import { TaxDetail, SaleScenario } from './types';
+import { LONG_TERM_CG_TAX_RATE, SHORT_TERM_CG_TAX_RATE } from './constants';
 
 /** 復興特別所得税 — 2013〜2037年は所得税額の2.1%が上乗せ */
 const RECONSTRUCTION_SURTAX = 1.021;
@@ -50,7 +51,7 @@ export function calcCapitalGainsTax(
   holdingYears: number
 ): { taxableGain: number; taxRate: number; tax: number; isLongTerm: boolean } {
   const isLongTerm = holdingYears > 5;
-  const taxRate = isLongTerm ? 0.20315 : 0.3963;
+  const taxRate = isLongTerm ? LONG_TERM_CG_TAX_RATE : SHORT_TERM_CG_TAX_RATE;
   const adjustedAcq = acquisitionCost - accumulatedDep; // 税務上取得費
   const taxableGain = Math.max(0, salePrice - adjustedAcq - sellingCosts);
   const tax = Math.floor(taxableGain * taxRate);

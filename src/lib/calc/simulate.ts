@@ -1,4 +1,5 @@
 import { SimInput, SimResult, CFRow, Ratios } from './types';
+import { LONG_TERM_CG_TAX_RATE, SHORT_TERM_CG_TAX_RATE } from './constants';
 import { calcPMT, calcAmortization, balanceAtYear, annualInterest, calcBankOptions } from './mortgage';
 import { calcDepreciation } from './depreciation';
 import { calcTotalTax, calcIncomeTaxRate, calcIncomeTax, calcResidentTax, calcSaleScenarios } from './tax';
@@ -112,7 +113,7 @@ export function simulate(input: SimInput): SimResult {
     totalTaxBurden: y1.incomeTax,
     holdingYears,
     isLongTerm: holdingYears > 5,
-    taxRate: holdingYears > 5 ? 0.20315 : 0.3963,
+    taxRate: holdingYears > 5 ? LONG_TERM_CG_TAX_RATE : SHORT_TERM_CG_TAX_RATE,
     salePrice: saleScenarios[1].salePrice,
     acquisitionCost: propertyPrice,
     accumulatedDep: cumDepAtSale,
