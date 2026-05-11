@@ -4,7 +4,7 @@ import { memo, useMemo } from 'react';
 import { AppShell } from '@/components/layout';
 import { useHomeLoanStore, type PrepayEvent } from '@/store/homeLoanStore';
 import { useShallow } from 'zustand/react/shallow';
-import { yen } from '@/lib/format';
+import { yen, yenM } from '@/lib/format';
 import {
   AreaChart,
   Area,
@@ -20,7 +20,6 @@ import {
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 // yen → @/lib/format からimport済み
-const man = (n: number) => Math.round(n / 10000).toLocaleString('ja-JP') + '万円';
 const pct = (n: number) => n.toFixed(1) + '%'; // 既にパーセント値の数値を受け取る（例: 25.3 → "25.3%"）
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -899,12 +898,12 @@ export default function HomeSimPage() {
             />
             <KpiCard
               label="総返済額"
-              value={man(totalPayment)}
+              value={yenM(totalPayment)}
               sub={yen(totalPayment)}
             />
             <KpiCard
               label="総利息"
-              value={man(totalInterest)}
+              value={yenM(totalInterest)}
               valueColor="text-danger-500"
             />
             <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
@@ -969,7 +968,7 @@ export default function HomeSimPage() {
                 <div className="bg-success-50 border border-success-500 rounded-lg p-3 text-center">
                   <p className="text-xs text-success-500 font-semibold mb-1">13年間 控除総額</p>
                   <p className="text-base font-extrabold text-success-500">
-                    {man(deductionRows.totalDeduction)}
+                    {yenM(deductionRows.totalDeduction)}
                   </p>
                 </div>
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
@@ -1031,10 +1030,10 @@ export default function HomeSimPage() {
                             {yen(s.mp)}/月
                           </td>
                           <td className="px-3 py-2 text-right text-neutral-700">
-                            {man(s.tp)}
+                            {yenM(s.tp)}
                           </td>
                           <td className="px-3 py-2 text-right text-neutral-700">
-                            {man(s.ti)}
+                            {yenM(s.ti)}
                           </td>
                           <td className={`px-3 py-2 text-right font-semibold ${ratioDanger ? 'text-danger-500' : ratioWarn ? 'text-warn-500' : 'text-success-500'}`}>
                             {pct(s.ratio)}
@@ -1110,7 +1109,7 @@ export default function HomeSimPage() {
                 <div className="bg-success-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-neutral-500 mb-1">利息削減額</p>
                   <p className="text-base font-extrabold text-success-500">
-                    {man(prepayEffect.interestSaved)}
+                    {yenM(prepayEffect.interestSaved)}
                   </p>
                 </div>
               </div>
