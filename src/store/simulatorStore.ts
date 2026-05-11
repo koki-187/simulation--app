@@ -78,5 +78,5 @@ if (typeof window !== 'undefined') {
       localStorage.setItem('mas-sim-store', JSON.stringify(migrated));
     }
     localStorage.removeItem('terass-sim-store');
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[MAS] legacy store migration skipped:', e); }
 }
