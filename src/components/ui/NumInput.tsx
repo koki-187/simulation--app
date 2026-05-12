@@ -25,12 +25,16 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
   const displayValue = fmt === 'percent' ? value * 100 : value;
   const [localValue, setLocalValue] = useState<string>('');
   const [focused, setFocused] = useState(false);
+  const [rangeError, setRangeError] = useState<string | null>(null);
   // 空欄ブラー時に前の有効値へ戻すためのRef
   const prevValueRef = useRef<number>(value);
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const inputMode = step < 1 ? 'decimal' : 'numeric';
 
   const handleFocus = () => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    setRangeError(null);
     prevValueRef.current = value;
     setLocalValue(String(displayValue));
     setFocused(true);
@@ -49,41 +53,67 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
       return;
     }
     let raw = parseFloat(trimmed);
+    const originalRaw = raw;
     if (min !== undefined) raw = Math.max(min, raw);
     if (max !== undefined) raw = Math.min(max, raw);
+
+    if (raw !== originalRaw) {
+      const fmtLimit = (n: number) =>
+        fmt === 'percent' ? `${(n * 100).toFixed(n < 0.01 ? 3 : 1)}%`
+        : fmt === 'currency' ? `¥${n.toLocaleString('ja-JP')}`
+        : fmt === 'years' ? `${n}年`
+        : n.toLocaleString('ja-JP');
+      const msg = (min !== undefined && originalRaw < min)
+        ? `最小値: ${fmtLimit(min)}`
+        : (max !== undefined && originalRaw > max)
+        ? `最大値: ${fmtLimit(max)}`
+        : '入力範囲外';
+      setRangeError(msg);
+      errorTimerRef.current = setTimeout(() => setRangeError(null), 3000);
+    } else {
+      setRangeError(null);
+    }
+
     onChange(fmt === 'percent' ? raw / 100 : raw);
     setFocused(false);
   };
 
   return (
-    <div className="flex items-center gap-2 py-1.5 border-b border-neutral-100 last:border-0">
-      <span className="label-cell flex-1 min-w-0 truncate">{label}</span>
-      <div className="flex items-center gap-1 shrink-0">
-        {readOnly ? (
-          <span
-            aria-label={`${label}: ${FMT[fmt](value)}`}
-            className="text-right font-mono text-sm text-navy-500 font-semibold min-w-[120px]"
-          >
-            {FMT[fmt](value)}
-          </span>
-        ) : (
-          <input
-            type="number"
-            inputMode={inputMode}
-            value={focused ? localValue : displayValue}
-            onFocus={handleFocus}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            min={min}
-            max={max}
-            step={step}
-            aria-label={label}
-            className="input-cell w-32 text-right"
-          />
-        )}
-        {unit && <span className="text-xs text-neutral-400 w-8">{unit}</span>}
+    <div className="border-b border-neutral-100 last:border-0">
+      <div className="flex items-center gap-2 py-1.5">
+        <span className="label-cell flex-1 min-w-0 truncate">{label}</span>
+        <div className="flex items-center gap-1 shrink-0">
+          {readOnly ? (
+            <span
+              aria-label={`${label}: ${FMT[fmt](value)}`}
+              className="text-right font-mono text-sm text-navy-500 font-semibold min-w-[120px]"
+            >
+              {FMT[fmt](value)}
+            </span>
+          ) : (
+            <input
+              type="number"
+              inputMode={inputMode}
+              value={focused ? localValue : displayValue}
+              onFocus={handleFocus}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              min={min}
+              max={max}
+              step={step}
+              aria-label={label}
+              className="input-cell w-32 text-right"
+            />
+          )}
+          {unit && <span className="text-xs text-neutral-400 w-8">{unit}</span>}
+        </div>
+        {note && <span className="text-xs text-neutral-400 ml-1 italic">{note}</span>}
       </div>
-      {note && <span className="text-xs text-neutral-400 ml-1 italic">{note}</span>}
+      {rangeError && (
+        <div className="text-xs text-danger-500 text-right pr-1 pb-1" role="alert">
+          ⚠ {rangeError}
+        </div>
+      )}
     </div>
   );
 }

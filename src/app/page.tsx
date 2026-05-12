@@ -143,13 +143,13 @@ export default function Dashboard() {
           {/* Annual CF Chart */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-navy-500 mb-3">年次税引後キャッシュフロー（万円）</h3>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={cfData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={3} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <XAxis dataKey="year" tick={{ fontSize: 13 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: unknown) => [typeof v === 'number' ? `${v.toLocaleString('ja-JP')}万円` : `${v}万円`]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="A 税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
                 <Bar dataKey="B 税引後CF" fill="#F5A623" radius={[2,2,0,0]} />
               </BarChart>
@@ -159,13 +159,13 @@ export default function Dashboard() {
           {/* Cumulative CF Chart */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-navy-500 mb-3">累計キャッシュフロー（万円）</h3>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={cfData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                <XAxis dataKey="year" tick={{ fontSize: 10 }} interval={3} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <XAxis dataKey="year" tick={{ fontSize: 13 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: unknown) => [typeof v === 'number' ? `${v.toLocaleString('ja-JP')}万円` : `${v}万円`]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Area type="monotone" dataKey="A 累計CF" stroke="#1C2B4A" fill="#EEF1F6" strokeWidth={2} />
                 <Area type="monotone" dataKey="B 累計CF" stroke="#E8632A" fill="#FFF5F0" strokeWidth={2} />
               </AreaChart>

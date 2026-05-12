@@ -19,7 +19,7 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
             <input value={input.propertyName} onChange={e => set({ propertyName: e.target.value })}
               className="input-cell w-48 text-left" />
           </div>
-          <NumInput label="物件価格" value={input.propertyPrice} onChange={v => set({ propertyPrice: Math.max(1_000_000, Math.min(10_000_000_000, v)) })} fmt="currency" unit="円" />
+          <NumInput label="物件価格" value={input.propertyPrice} onChange={v => set({ propertyPrice: Math.max(1_000_000, Math.min(10_000_000_000, v)) })} fmt="currency" unit="円" min={1_000_000} max={10_000_000_000} />
           <div className="flex items-center gap-2 py-1.5">
             <span className="label-cell flex-1">物件種別</span>
             <select value={input.propertyType} onChange={e => set({ propertyType: e.target.value })}
@@ -42,8 +42,8 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
           💡 金利は変動金利の場合0.5〜2%、固定10年で1〜2%程度。
           投資用不動産は住宅ローンより高く1.5〜3%が一般的です。
         </p>
-        <NumInput label="金利（年）" value={input.rate} onChange={v => set({ rate: Math.max(0.001, Math.min(0.20, v)) })} fmt="percent" step={0.01} />
-        <NumInput label="返済期間" value={input.termYears} onChange={v => set({ termYears: Math.max(1, Math.min(50, v)) })} fmt="years" unit="年" />
+        <NumInput label="金利（年）" value={input.rate} onChange={v => set({ rate: Math.max(0.001, Math.min(0.20, v)) })} fmt="percent" step={0.01} min={0.001} max={0.20} />
+        <NumInput label="返済期間" value={input.termYears} onChange={v => set({ termYears: Math.max(1, Math.min(50, v)) })} fmt="years" unit="年" min={1} max={50} />
         <NumInput label="月々返済額（自動）" value={result.monthlyPayment} onChange={() => {}} fmt="currency" unit="円/月" readOnly />
         <NumInput label="総支払額（自動）" value={result.totalPayment} onChange={() => {}} fmt="currency" unit="円" readOnly />
         <NumInput label="総利息（自動）" value={result.totalInterest} onChange={() => {}} fmt="currency" unit="円" readOnly />
@@ -58,7 +58,7 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
         <NumInput label="管理費（月）" value={input.managementFee} onChange={v => set({ managementFee: Math.max(0, v) })} fmt="currency" unit="円/月" />
         <NumInput label="修繕積立金（月）" value={input.repairFund} onChange={v => set({ repairFund: Math.max(0, v) })} fmt="currency" unit="円/月" />
         <NumInput label="その他費用（月）" value={input.otherExpenses} onChange={v => set({ otherExpenses: Math.max(0, v) })} fmt="currency" unit="円/月" />
-        <NumInput label="空室率" value={input.vacancyRate} onChange={v => set({ vacancyRate: Math.max(0, Math.min(0.99, v)) })} fmt="percent" step={0.01} />
+        <NumInput label="空室率" value={input.vacancyRate} onChange={v => set({ vacancyRate: Math.max(0, Math.min(0.99, v)) })} fmt="percent" step={0.01} min={0} max={0.99} />
         <NumInput label="実効家賃（自動）" value={result.effectiveMonthlyRent} onChange={() => {}} fmt="currency" unit="円/月" readOnly />
         <NumInput label="固都税（年）" value={input.fixedAssetTax} onChange={v => set({ fixedAssetTax: Math.max(0, v) })} fmt="currency" unit="円/年" />
         <NumInput label="表面利回り（自動）" value={result.ratios.grossYield} onChange={() => {}} fmt="percent" readOnly />

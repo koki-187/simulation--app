@@ -68,9 +68,15 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
 
-  /* ── モバイルのオーバースクロール（バウンス）防止 ── */
-  overscroll-behavior-y: none;
+/* ── モーダル・オーバーレイ内でのみオーバースクロールを封じ込め ───────────────
+   body全体に overscroll-behavior-y:none を適用すると、スクロール可能ページ
+   （cashflow/amortizationなど）でモバイルのプルトゥリフレッシュが使えなくなる。
+   fixed overlay要素にのみ contain を適用して誤動作を防ぐ。
+   ─────────────────────────────────────────────────────────────────────────── */
+.fixed.inset-0 {
+  overscroll-behavior: contain;
 }
 
 /* iOSタップハイライト除去 */
