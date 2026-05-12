@@ -111,11 +111,14 @@ export const Sidebar = memo(function Sidebar({
       <div className="px-3 py-3 border-t border-navy-600">
         <button
           onClick={() => onBatchPrint?.()}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white text-sm font-bold transition-colors"
         >
           <span>📄</span>
           <span>一括PDF出力</span>
         </button>
+        <p className="text-[10px] text-navy-400 text-center mt-1.5 leading-tight">
+          CF・売却・税金など複数ページを<br/>1つのPDFにまとめて出力
+        </p>
       </div>
     </aside>
   );

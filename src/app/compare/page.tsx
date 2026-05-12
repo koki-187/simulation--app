@@ -185,11 +185,11 @@ export default function ComparePage() {
           <ResponsiveContainer width="100%" height={280}>
             <RadarChart data={radarData}>
               <PolarGrid />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 12 }} />
               <Radar name={`A: ${inputA.propertyName}`} dataKey="A" stroke="#E8632A" fill="#E8632A" fillOpacity={0.25} strokeWidth={2} />
               <Radar name={`B: ${inputB.propertyName}`} dataKey="B" stroke="#1C2B4A" fill="#1C2B4A" fillOpacity={0.15} strokeWidth={2} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Tooltip formatter={(v: unknown) => [`${Math.round(Number(v))}pt`]} />
             </RadarChart>
           </ResponsiveContainer>

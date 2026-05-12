@@ -4,73 +4,25 @@ import { AppShell, PatternToggle } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen } from '@/lib/format';
-import { CFRow, SimInput } from '@/lib/calc/types';
+import { CFRow, SimInput, SimResult } from '@/lib/calc/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { cashflowBarChartSvg } from '@/lib/pdf/chartSvg';
-
-function buildCashflowHtml(rows: CFRow[], input: SimInput, patternLabel: string): string {
-  const fmt = (n: number) => Math.round(n).toLocaleString('ja-JP');
-  const today = new Date().toLocaleDateString('ja-JP');
-
-  const tableRows = rows.map(r => `
-    <tr style="background:${r.cumulativeCF >= 0 && (rows[r.year - 2]?.cumulativeCF ?? -1) < 0 ? '#FFF7ED' : r.year % 2 === 0 ? '#F9FAFB' : 'white'}">
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;">${r.year}年</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.rentalIncome)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.managementCosts)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.operatingCF >= 0 ? '#16A34A' : '#DC2626'};">¥${fmt(r.operatingCF)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.annualLoanPayment)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.incomeTax > 0 ? '#DC2626' : '#111827'};">¥${fmt(r.incomeTax)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.afterTaxCF >= 0 ? '#16A34A' : '#DC2626'};">¥${fmt(r.afterTaxCF)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;color:${r.cumulativeCF >= 0 ? '#16A34A' : '#DC2626'};font-weight:bold;">¥${fmt(r.cumulativeCF)}</td>
-      <td style="padding:3px 6px;border:1px solid #E5E7EB;text-align:right;">¥${fmt(r.loanBalance)}</td>
-    </tr>
-  `).join('');
-
-  return `
-    <div style="padding:20px;">
-      <div style="background:#1C2B4A;color:white;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
-        <div style="font-size:16px;font-weight:bold;">キャッシュフロー分析${patternLabel ? ` — ${patternLabel}` : ''}</div>
-        <div style="font-size:11px;margin-top:4px;opacity:0.8;">物件: ${input.propertyName} ／ 作成日: ${today}</div>
-      </div>
-      ${cashflowBarChartSvg(rows)}
-      <table style="width:100%;border-collapse:collapse;font-size:9px;">
-        <thead>
-          <tr style="background:#1C2B4A;color:white;">
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:left;">年</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">家賃収入</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">運営費</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">運営CF</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">ローン返済</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">税金</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">税引後CF</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">累計CF</th>
-            <th style="padding:4px 6px;border:1px solid #374151;text-align:right;">残債</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-      <div style="margin-top:12px;font-size:9px;color:#6B7280;">
-        ※本シミュレーションは概算です。実際の数値は専門家にご相談ください。 | MAS
-      </div>
-    </div>
-  `;
-}
 
 async function exportCashflowPDF(
-  resultA: { cashFlows: CFRow[]; input: SimInput },
-  resultB: { cashFlows: CFRow[]; input: SimInput },
+  resultA: SimResult,
+  resultB: SimResult,
   activePattern: string,
 ) {
   const { elementToPdf } = await import('@/lib/pdf/jpdf');
+  const { cashflowSectionHtml } = await import('@/lib/pdf/sectionHtml');
   const today = new Date().toLocaleDateString('ja-JP');
 
   let html: string;
   if (activePattern === 'compare') {
-    html = buildCashflowHtml(resultA.cashFlows, resultA.input, 'パターンA')
-         + buildCashflowHtml(resultB.cashFlows, resultB.input, 'パターンB');
+    html = cashflowSectionHtml(resultA, 'パターンA')
+         + cashflowSectionHtml(resultB, 'パターンB');
   } else {
     const result = activePattern === 'B' ? resultB : resultA;
-    html = buildCashflowHtml(result.cashFlows, result.input, '');
+    html = cashflowSectionHtml(result, '');
   }
 
   await elementToPdf({
@@ -144,13 +96,13 @@ export default function CashFlowPage() {
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
           <h3 className="text-sm font-bold text-navy-500 mb-3">年次CF推移（万円）</h3>
           <div className="overflow-hidden">
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v.toLocaleString('ja-JP')} width={60} />
+                <XAxis dataKey="year" tick={{ fontSize: 13 }} />
+                <YAxis tick={{ fontSize: 13 }} tickFormatter={(v) => v.toLocaleString('ja-JP')} width={60} />
                 <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine y={0} stroke="#667085" strokeDasharray="3 3" />
                 <Bar dataKey="運営CF" fill="#1C2B4A" radius={[2,2,0,0]} />
                 <Bar dataKey="税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
