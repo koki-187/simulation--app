@@ -64,8 +64,19 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={`${inter.variable} ${notoSansJP.variable}`}>
-      <body className={`min-h-screen bg-neutral-50 ${notoSansJP.className}`}>
+    // suppressHydrationWarning: OSによってブラウザが追加する属性（class/style）による
+    // hydrationミスマッチを抑制（Windows High Contrast等）
+    <html lang="ja" className={`${inter.variable} ${notoSansJP.variable}`} suppressHydrationWarning>
+      <body
+        className={`min-h-screen bg-neutral-50 ${notoSansJP.className}`}
+        style={{
+          // Google Fonts のロード前・オフライン時のフォントフォールバック（OS別）
+          // macOS: -apple-system / Hiragino Sans
+          // Windows: 'Yu Gothic UI' / Meiryo / Segoe UI
+          // Linux: Noto Sans CJK
+          fontFamily: `var(--font-noto-sans-jp), 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', 'Noto Sans CJK JP', -apple-system, 'Segoe UI', sans-serif`,
+        }}
+      >
         <ServiceWorkerRegistration />
         {children}
       </body>

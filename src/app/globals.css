@@ -51,6 +51,15 @@
 /* ── スムーズスクロール ──────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
+
+  /* ── フォントレンダリング（macOS/iOS: Retina向けアンチエイリアス） ── */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* ── iOSフォント自動拡大防止（横持ち時のリフロー防止） ── */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ── iOS Safe Area対応 ─────────────────────────────────────────────────────── */
@@ -59,11 +68,73 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+
+  /* ── モバイルのオーバースクロール（バウンス）防止 ── */
+  overscroll-behavior-y: none;
 }
 
 /* iOSタップハイライト除去 */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ── カスタムスクロールバー ──────────────────────────────────────────────────
+   Windows: デフォルトは太いシステムスクロールバー → 細くスタイル統一
+   macOS: オーバーレイ表示のためほぼ影響なし（見た目の一貫性のため定義）
+   Firefox: scrollbar-width / scrollbar-color で制御
+   ─────────────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-200);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-200) transparent;
+}
+
+/* ── scrollbar-hide ユーティリティ（Tailwindプラグイン代替） ─────────────── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── キーボードナビゲーション用 focus-visible ────────────────────────────────
+   マウス操作ではアウトライン非表示、Tab/キーボード操作では表示（全OS共通）
+   ─────────────────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-orange-500);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── Windows 高コントラストモード（Forced Colors）対応 ──────────────────────
+   ハイコントラスト時はカスタム色を無効化し、システム色を使用
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (forced-colors: active) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    forced-color-adjust: none;
+    border: 1px solid ButtonText;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
 }
 
 /* number input のスピナー（▲▼）を非表示 — モバイル誤操作防止 */
@@ -98,7 +169,8 @@ input[type="number"] {
   .label-cell      { @apply text-neutral-700 text-sm font-medium; }
   .value-positive  { @apply text-success-500 font-semibold; }
   .value-negative  { @apply text-danger-500 font-semibold; }
-  .btn-primary     { @apply bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer; }
-  .btn-secondary   { @apply bg-navy-500 hover:bg-navy-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer; }
-  .btn-ghost       { @apply bg-transparent hover:bg-neutral-100 text-neutral-700 font-medium px-4 py-2 rounded-lg transition-colors border border-neutral-200 cursor-pointer; }
+  /* active: でタッチデバイスでも押下フィードバック（hover: はPC専用） */
+  .btn-primary     { @apply bg-orange-500 hover:bg-orange-600 active:bg-orange-700 active:scale-[0.97] text-white font-semibold px-4 py-2 rounded-lg transition-all cursor-pointer select-none; }
+  .btn-secondary   { @apply bg-navy-500 hover:bg-navy-600 active:bg-navy-700 active:scale-[0.97] text-white font-semibold px-4 py-2 rounded-lg transition-all cursor-pointer select-none; }
+  .btn-ghost       { @apply bg-transparent hover:bg-neutral-100 active:bg-neutral-200 active:scale-[0.97] text-neutral-700 font-medium px-4 py-2 rounded-lg transition-all border border-neutral-200 cursor-pointer select-none; }
 }
