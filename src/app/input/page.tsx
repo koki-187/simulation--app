@@ -1,8 +1,9 @@
 'use client';
 import { AppShell, PatternToggle } from '@/components/layout';
-import { Section, NumInput } from '@/components/ui';
+import { Section, NumInput, ShareButton } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
 import { DEFAULT_INPUT_A, DEFAULT_INPUT_B } from '@/lib/calc/simulate';
+import { PRESETS } from '@/lib/calc/presets';
 
 function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
   const { inputA, inputB, resultA, resultB, setInputA, setInputB } = useSimStore();
@@ -12,6 +13,29 @@ function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
 
   return (
     <div className="space-y-4">
+      {/* プリセット選択 */}
+      <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-3">
+        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">📐 プリセット</div>
+        <div className="flex flex-wrap gap-1.5">
+          {PRESETS.map(preset => (
+            <button
+              key={preset.label}
+              type="button"
+              title={preset.description}
+              onClick={() => {
+                if (confirm(`「${preset.label}」の典型値を入力しますか？\n現在の入力値は上書きされます。`)) {
+                  set(preset.values);
+                }
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 bg-white hover:border-orange-400 hover:bg-orange-50 hover:text-orange-700 transition-colors"
+            >
+              <span>{preset.icon}</span>
+              <span>{preset.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <Section title="1. 物件情報">
         <div className="grid grid-cols-1 gap-0">
           <div className="flex items-center gap-2 py-2 border-b border-neutral-100">
@@ -119,7 +143,10 @@ export default function InputPage() {
           <h1 className="text-lg font-bold">入力フォーム</h1>
           <p className="text-xs text-navy-100">物件情報・ローン・運用条件の入力</p>
         </div>
-        <PatternToggle />
+        <div className="flex items-center gap-2">
+          <ShareButton pattern="both" />
+          <PatternToggle />
+        </div>
       </div>
       <div className="p-6">
         {activePattern === 'compare' ? (

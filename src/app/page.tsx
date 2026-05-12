@@ -7,6 +7,8 @@ import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, cagr, mult } from '@/lib/format';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { simulate } from '@/lib/calc/simulate';
+import type { SimInput } from '@/lib/calc/types';
 
 export default function Dashboard() {
   const { resultA, resultB, inputA, inputB } = useSimStore(
@@ -24,6 +26,26 @@ export default function Dashboard() {
     })),
     [resultA.cashFlows, resultB.cashFlows]
   );
+
+  const sensitivityData = useMemo(() => {
+    const deltas = [-0.010, -0.005, 0, +0.005, +0.010]; // -1%, -0.5%, 0, +0.5%, +1%
+    return deltas.map(delta => {
+      const modA: SimInput = { ...resultA.input, rate: Math.max(0.001, resultA.input.rate + delta) };
+      const modB: SimInput = { ...resultB.input, rate: Math.max(0.001, resultB.input.rate + delta) };
+      const rA = simulate(modA);
+      const rB = simulate(modB);
+      return {
+        delta,
+        label: delta === 0 ? '現在' : delta > 0 ? `+${(delta * 100).toFixed(1)}%` : `${(delta * 100).toFixed(1)}%`,
+        rateA: modA.rate,
+        rateB: modB.rate,
+        cfA: rA.cashFlows[0]?.afterTaxCF ?? 0,
+        cfB: rB.cashFlows[0]?.afterTaxCF ?? 0,
+        payA: rA.monthlyPayment,
+        payB: rB.monthlyPayment,
+      };
+    });
+  }, [resultA.input, resultB.input]);
 
   const saleA = resultA.saleScenarios[1]; // standard
   const saleB = resultB.saleScenarios[1];
@@ -170,6 +192,54 @@ export default function Dashboard() {
                 <Area type="monotone" dataKey="B 累計CF" stroke="#E8632A" fill="#FFF5F0" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Sensitivity Analysis */}
+        <div className="bg-white rounded-xl border border-neutral-100 shadow-card overflow-hidden">
+          <div className="bg-navy-500 text-white px-4 py-2.5 font-bold text-sm flex items-center gap-2">
+            <span>📉</span>
+            <span>金利感度分析 — 金利変動が月返済額・税引後CF(1年目)に与える影響</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-neutral-50 border-b border-neutral-200">
+                  <th scope="col" className="px-4 py-2 text-left text-xs text-neutral-500 font-semibold">金利変動</th>
+                  <th scope="col" className="px-3 py-2 text-center text-xs font-semibold text-orange-500">A 金利</th>
+                  <th scope="col" className="px-3 py-2 text-center text-xs font-semibold text-orange-500">A 月返済額</th>
+                  <th scope="col" className="px-3 py-2 text-center text-xs font-semibold text-orange-500">A 税引後CF</th>
+                  <th scope="col" className="px-3 py-2 text-center text-xs font-semibold text-orange-300">B 金利</th>
+                  <th scope="col" className="px-3 py-2 text-center text-xs font-semibold text-orange-300">B 月返済額</th>
+                  <th scope="col" className="px-3 py-2 text-center text-xs font-semibold text-orange-300">B 税引後CF</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sensitivityData.map((row, ri) => (
+                  <tr
+                    key={row.delta}
+                    className={`${ri % 2 === 0 ? 'bg-white' : 'bg-neutral-50'} ${row.delta === 0 ? 'ring-1 ring-inset ring-orange-200' : ''}`}
+                  >
+                    <td className="px-4 py-2 text-xs font-bold text-neutral-700">
+                      {row.delta === 0 ? (
+                        <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px]">現在</span>
+                      ) : (
+                        <span className={row.delta > 0 ? 'text-danger-500' : 'text-success-500'}>{row.label}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-center text-xs text-neutral-700">{(row.rateA * 100).toFixed(3)}%</td>
+                    <td className="px-3 py-2 text-right text-xs font-semibold text-navy-500">{yen(row.payA)}</td>
+                    <td className={`px-3 py-2 text-right text-xs font-semibold ${row.cfA >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{yen(row.cfA)}</td>
+                    <td className="px-3 py-2 text-center text-xs text-neutral-700">{(row.rateB * 100).toFixed(3)}%</td>
+                    <td className="px-3 py-2 text-right text-xs font-semibold text-navy-500">{yen(row.payB)}</td>
+                    <td className={`px-3 py-2 text-right text-xs font-semibold ${row.cfB >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{yen(row.cfB)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-2 text-[10px] text-neutral-400 border-t border-neutral-100">
+            ※ 金利のみを変動させた場合の概算。空室率・経費等は現在の入力値を使用。
           </div>
         </div>
 
