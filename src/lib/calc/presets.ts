@@ -15,6 +15,8 @@ export const PRESETS: Preset[] = [
     values: {
       propertyName: '都心RC区分マンション',
       propertyType: '区分マンション',
+      location: '東京都',
+      managementType: 'shukkin',
       propertyPrice: 50_000_000,
       equity: 5_000_000,
       expenses: 1_500_000,
@@ -31,6 +33,8 @@ export const PRESETS: Preset[] = [
       equipmentDepYears: 15,
       holdingYears: 10,
       growthRate: 0.000,
+      structurePrice: 0,
+      equipmentPrice: 0,
     },
   },
   {
@@ -40,6 +44,8 @@ export const PRESETS: Preset[] = [
     values: {
       propertyName: '地方木造戸建て',
       propertyType: '戸建て',
+      location: '地方',
+      managementType: 'shukkin',
       propertyPrice: 12_000_000,
       equity: 2_000_000,
       expenses: 400_000,
@@ -56,6 +62,8 @@ export const PRESETS: Preset[] = [
       equipmentDepYears: 10,
       holdingYears: 10,
       growthRate: -0.005,
+      structurePrice: 0,
+      equipmentPrice: 0,
     },
   },
   {
@@ -65,6 +73,8 @@ export const PRESETS: Preset[] = [
     values: {
       propertyName: '地方軽鉄一棟アパート',
       propertyType: '一棟アパート',
+      location: '地方',
+      managementType: 'shukkin',
       propertyPrice: 60_000_000,
       equity: 6_000_000,
       expenses: 1_800_000,
@@ -81,6 +91,8 @@ export const PRESETS: Preset[] = [
       equipmentDepYears: 12,
       holdingYears: 10,
       growthRate: -0.003,
+      structurePrice: 0,
+      equipmentPrice: 0,
     },
   },
   {
@@ -90,6 +102,8 @@ export const PRESETS: Preset[] = [
     values: {
       propertyName: '都心RC一棟マンション',
       propertyType: '一棟マンション',
+      location: '東京都',
+      managementType: 'shukkin',
       propertyPrice: 200_000_000,
       equity: 30_000_000,
       expenses: 5_000_000,
@@ -106,6 +120,8 @@ export const PRESETS: Preset[] = [
       equipmentDepYears: 15,
       holdingYears: 15,
       growthRate: 0.005,
+      structurePrice: 0,
+      equipmentPrice: 0,
     },
   },
   {
@@ -115,6 +131,8 @@ export const PRESETS: Preset[] = [
     values: {
       propertyName: '地方商業テナント',
       propertyType: '商業',
+      location: '地方',
+      managementType: 'self',
       propertyPrice: 30_000_000,
       equity: 5_000_000,
       expenses: 900_000,
@@ -131,6 +149,8 @@ export const PRESETS: Preset[] = [
       equipmentDepYears: 10,
       holdingYears: 8,
       growthRate: -0.010,
+      structurePrice: 0,
+      equipmentPrice: 0,
     },
   },
 ];

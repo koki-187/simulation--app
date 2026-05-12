@@ -131,8 +131,10 @@ export function simulate(input: SimInput): SimResult {
 
   // ── Ratios ─────────────────────────────────────────────────────────────────
   const grossYield = effectiveMonthlyRent > 0 ? (monthlyRent * 12) / propertyPrice : 0;
-  const netYield = propertyPrice > 0
-    ? ((effectiveMonthlyRent * 12) - (managementFee + repairFund + otherExpenses) * 12 - fixedAssetTax) / propertyPrice
+  // 実質利回り: 分母は「物件価格 + 取得費用」（購入に要した総コスト）
+  const acquisitionTotal = propertyPrice + expenses;
+  const netYield = acquisitionTotal > 0
+    ? ((effectiveMonthlyRent * 12) - (managementFee + repairFund + otherExpenses) * 12 - fixedAssetTax) / acquisitionTotal
     : 0;
   const monthlyLoanPayment = monthlyPayment;
   const breakevenRent = monthlyLoanPayment + managementFee + repairFund + otherExpenses + fixedAssetTax / 12;

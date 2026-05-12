@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { encodeShareUrl, decodeShareUrl } from '@/lib/shareUrl';
@@ -9,6 +9,14 @@ export function ShareButton({ pattern }: { pattern?: 'A' | 'B' | 'both' }) {
     useShallow(s => ({ inputA: s.inputA, inputB: s.inputB, setInputA: s.setInputA, setInputB: s.setInputB }))
   );
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // アンマウント時にタイマーをクリア
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   // On mount: check for ?share= param and restore state
   useEffect(() => {
@@ -34,7 +42,8 @@ export function ShareButton({ pattern }: { pattern?: 'A' | 'B' | 'both' }) {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       prompt('以下のURLをコピーしてください:', url);
     }

@@ -17,9 +17,9 @@ export function encodeShareUrl(inputA: SimInput, inputB?: SimInput): string {
     ...(inputB ? { b: inputB } : {}),
   };
   const json = JSON.stringify(payload);
-  const b64 = typeof btoa !== 'undefined'
-    ? btoa(encodeURIComponent(json))
-    : Buffer.from(json).toString('base64');
+  // encodeURIComponent → 100% ASCII, btoa は ASCII only なので安全
+  // Buffer.from fallback は除去（window.location を使うためブラウザ専用）
+  const b64 = btoa(encodeURIComponent(json));
   const url = new URL(window.location.href);
   url.searchParams.set('share', b64);
   url.pathname = '/input'; // always link to input page

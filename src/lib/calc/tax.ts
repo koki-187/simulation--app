@@ -84,8 +84,11 @@ export function calcSaleScenarios(
     );
     const afterTaxProfit = preTaxProfit - tax;
     const totalReturn = afterTaxProfit + cumulativeCF;
+    const totalReturnFinal = totalReturn + initialInvestment;
     const cagr = initialInvestment > 0 && holdingYears > 0
-      ? Math.pow(Math.max(0.001, totalReturn + initialInvestment) / initialInvestment, 1 / holdingYears) - 1
+      ? totalReturnFinal <= 0
+        ? -1  // 全損シナリオ: −100%（Math.max(0.001)による~−66%の誤表示を修正）
+        : Math.pow(totalReturnFinal / initialInvestment, 1 / holdingYears) - 1
       : 0;
     const investmentMultiple = initialInvestment > 0 ? (totalReturn + initialInvestment) / initialInvestment : 0;
 

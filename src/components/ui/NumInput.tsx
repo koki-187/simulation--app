@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface NumInputProps {
   label: string;
@@ -29,6 +29,13 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
   // 空欄ブラー時に前の有効値へ戻すためのRef
   const prevValueRef = useRef<number>(value);
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // アンマウント時にタイマーをクリアしてメモリリークを防止
+  useEffect(() => {
+    return () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
 
   const inputMode = step < 1 ? 'decimal' : 'numeric';
 
