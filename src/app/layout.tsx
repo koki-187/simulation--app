@@ -20,6 +20,9 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mas.vercel.app'
+  ),
   title: 'MAS - My Agent Simulation',
   description: '不動産投資・住宅ローン返済・借り換え・繰上げ返済シミュレーター。キャッシュフロー分析、売却シナリオ、税務明細まで網羅。',
   keywords: ['不動産投資', '住宅ローン', 'シミュレーター', 'キャッシュフロー', '借り換え', '繰上げ返済', 'MAS'],
