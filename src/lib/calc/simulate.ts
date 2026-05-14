@@ -179,6 +179,58 @@ export function simulate(input: SimInput): SimResult {
   };
 }
 
+export function createDefaultResult(input: SimInput): SimResult {
+  return {
+    input,
+    loanAmount: 0,
+    initialInvestment: 0,
+    monthlyPayment: 0,
+    totalPayment: 0,
+    totalInterest: 0,
+    effectiveMonthlyRent: 0,
+    structurePrice: 0,
+    equipmentPrice: 0,
+    annualStructureDep: 0,
+    annualEquipmentDep: 0,
+    annualDepreciation: 0,
+    amortization: [],
+    depreciation: [],
+    cashFlows: [],
+    saleScenarios: [
+      { label: '悲観', multiplier: 0.9, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: 0, investmentMultiple: 0, holdingYears: input.holdingYears },
+      { label: '標準', multiplier: 1.0, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: 0, investmentMultiple: 0, holdingYears: input.holdingYears },
+      { label: '楽観', multiplier: 1.1, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: 0, investmentMultiple: 0, holdingYears: input.holdingYears },
+    ],
+    taxDetail: {
+      rentalRevenue: 0, managementExp: 0, repairExp: 0, insuranceEst: 0,
+      fixedAssetTax: 0, depreciation: 0, loanInterest: 0, totalExpenses: 0,
+      realEstateIncome: 0, incomeTaxRate: 0, incomeTax: 0, residentTax: 0,
+      totalTaxBurden: 0, holdingYears: input.holdingYears, isLongTerm: input.holdingYears > 5,
+      taxRate: 0, salePrice: 0, acquisitionCost: 0, accumulatedDep: 0,
+      sellingCosts: 0, taxableGain: 0, capitalGainsTax: 0,
+      salaryIncome: 0, hasLoss: false, deductibleLoss: 0,
+      combinedTaxableIncome: 0, taxOnSalaryAlone: 0, taxOnCombined: 0,
+      estimatedTaxRefund: 0,
+    },
+    ratios: {
+      grossYield: 0, netYield: 0, repaymentRatio: 0,
+      incomeMultipleTax: 0, incomeMultipleDeclared: 0,
+      repaymentRatioTax: 0, repaymentRatioDeclared: 0,
+      breakevenRent: 0, dscr: 0,
+    },
+    banks: [],
+  };
+}
+
+export function safeSimulate(input: SimInput): SimResult {
+  try {
+    return simulate(input);
+  } catch (e) {
+    console.error('[MAS] simulate() threw an unexpected error:', e, '\nInput:', JSON.stringify(input));
+    return createDefaultResult(input);
+  }
+}
+
 /** Default input for Pattern A */
 export const DEFAULT_INPUT_A: SimInput = {
   propertyName: '物件A',

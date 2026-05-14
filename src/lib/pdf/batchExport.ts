@@ -59,14 +59,19 @@ export async function batchExportPdf(
     try {
       await document.fonts.ready;
 
-      const canvas = await html2canvas(container, {
-        scale,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: containerWidthPx,
-        windowWidth: containerWidthPx,
-      });
+      const canvas = await Promise.race([
+        html2canvas(container, {
+          scale,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: containerWidthPx,
+          windowWidth: containerWidthPx,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('html2canvas timeout')), 30_000)
+        ),
+      ]);
 
       // Initialize doc with first section's orientation
       if (doc === null) {
@@ -122,6 +127,9 @@ export async function batchExportPdf(
 
       // Yield to allow UI updates (progress bar render)
       await new Promise<void>(resolve => setTimeout(resolve, 0));
+    } catch (sectionError) {
+      console.error(`[MAS] PDF section "${section.label}" failed:`, sectionError);
+      // Skip this section and continue — don't rethrow
     } finally {
       document.body.removeChild(container);
     }

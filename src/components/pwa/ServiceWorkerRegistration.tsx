@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function ServiceWorkerRegistration(): null {
+export default function ServiceWorkerRegistration() {
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator)) return;
@@ -23,22 +25,18 @@ export default function ServiceWorkerRegistration(): null {
 
     const register = async () => {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
+        const reg = await navigator.serviceWorker.register('/sw.js');
 
-        if (registration.waiting) {
-          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
 
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
           if (!newWorker) return;
           newWorker.addEventListener('statechange', () => {
-            if (
-              newWorker.state === 'installed' &&
-              navigator.serviceWorker.controller
-            ) {
-              // New version installed; activate immediately.
-              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              setUpdateAvailable(true);
             }
           });
         });
@@ -58,5 +56,19 @@ export default function ServiceWorkerRegistration(): null {
     };
   }, []);
 
-  return null;
+  return (
+    <>
+      {updateAvailable && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-navy-500 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+          <span>🔄 アプリが更新されました</span>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            今すぐ更新
+          </button>
+        </div>
+      )}
+    </>
+  );
 }

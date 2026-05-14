@@ -4,12 +4,14 @@ import { Sidebar } from './Sidebar';
 import { ErrorBoundary } from '@/components/ui';
 import { BatchPrintModal } from '@/components/BatchPrintModal';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { OfflineIndicator } from '@/components/pwa/OfflineIndicator';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [batchPrintOpen, setBatchPrintOpen] = useState(false);
   return (
     <div className="flex min-h-screen">
+      <OfflineIndicator />
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
