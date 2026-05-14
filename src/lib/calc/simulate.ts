@@ -13,7 +13,8 @@ export function simulate(input: SimInput): SimResult {
   } = input;
 
   // ── Core values ─────────────────────────────────────────────────────────────
-  const loanAmount = propertyPrice - equity;
+  // equity >= propertyPrice の場合は借入なし（フルキャッシュ購入）として扱う
+  const loanAmount = Math.max(0, propertyPrice - equity);
   const initialInvestment = equity + expenses;
   const monthlyPayment = calcPMT(rate, termYears, loanAmount);
   const totalPayment = monthlyPayment * termYears * 12;
@@ -130,7 +131,8 @@ export function simulate(input: SimInput): SimResult {
   };
 
   // ── Ratios ─────────────────────────────────────────────────────────────────
-  const grossYield = effectiveMonthlyRent > 0 ? (monthlyRent * 12) / propertyPrice : 0;
+  // 表面利回り: propertyPrice > 0 でガード（effectiveMonthlyRent ではなく物件価格が分母）
+  const grossYield = propertyPrice > 0 ? (monthlyRent * 12) / propertyPrice : 0;
   // 実質利回り: 分母は「物件価格 + 取得費用」（購入に要した総コスト）
   const acquisitionTotal = propertyPrice + expenses;
   const netYield = acquisitionTotal > 0

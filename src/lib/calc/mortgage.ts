@@ -3,6 +3,8 @@ import { DEFAULT_BANK_OPTIONS } from './constants';
 
 /** PMT formula: monthly payment for a fixed-rate loan */
 export function calcPMT(annualRate: number, termYears: number, principal: number): number {
+  // termYears=0 または principal<=0 の場合は 0 を返す（Infinity 伝播防止）
+  if (termYears <= 0 || principal <= 0) return 0;
   if (annualRate === 0) return Math.floor(principal / (termYears * 12));
   const r = annualRate / 12;
   const n = termYears * 12;

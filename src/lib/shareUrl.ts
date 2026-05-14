@@ -26,11 +26,31 @@ export function encodeShareUrl(inputA: SimInput, inputB?: SimInput): string {
   return url.toString();
 }
 
+/** 数値フィールドが実際に number 型かチェックするミニバリデーター */
+function isValidPartialInput(obj: unknown): obj is Partial<import('@/lib/calc/types').SimInput> {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const numericFields = [
+    'propertyPrice', 'equity', 'expenses', 'rate', 'termYears',
+    'monthlyRent', 'managementFee', 'repairFund', 'otherExpenses',
+    'vacancyRate', 'fixedAssetTax', 'buildingRatio',
+    'structureDepYears', 'equipmentDepYears', 'holdingYears', 'growthRate',
+    'annualIncomeTaxBase', 'annualIncomeDeclared',
+  ];
+  const record = obj as Record<string, unknown>;
+  for (const field of numericFields) {
+    if (field in record && typeof record[field] !== 'number') return false;
+  }
+  return true;
+}
+
 export function decodeShareUrl(param: string): SharePayload | null {
   try {
     const json = decodeURIComponent(atob(param));
     const parsed = JSON.parse(json) as SharePayload;
     if (parsed.v !== 1) return null;
+    // 数値フィールドの型を検証 — 不正なURLでストアが汚染されるのを防ぐ
+    if (parsed.a && !isValidPartialInput(parsed.a)) return null;
+    if (parsed.b && !isValidPartialInput(parsed.b)) return null;
     return parsed;
   } catch {
     return null;
