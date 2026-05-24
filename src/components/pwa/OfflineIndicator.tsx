@@ -2,12 +2,12 @@
 import { useEffect, useState } from 'react';
 
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true);
+  // Initialize with navigator.onLine if available (client-only), default true for SSR
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof window !== 'undefined' ? navigator.onLine : true
+  );
 
   useEffect(() => {
-    // Initialize from current state
-    setIsOnline(navigator.onLine);
-
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 

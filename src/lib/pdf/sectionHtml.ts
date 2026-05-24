@@ -108,7 +108,6 @@ function gridOverlay(w: number, h: number): string {
 
 /** L-corner marks */
 function cornerMarks(leg = 28): string {
-  const s = `background:rgba(255,255,255,0.30)`;
   const pos = [
     { top: '20px', left: '20px',  borderTop: `1px solid rgba(255,255,255,0.35)`, borderLeft: `1px solid rgba(255,255,255,0.35)` },
     { top: '20px', right: '20px', borderTop: `1px solid rgba(255,255,255,0.35)`, borderRight: `1px solid rgba(255,255,255,0.35)` },
