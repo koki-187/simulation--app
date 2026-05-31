@@ -1,15 +1,22 @@
 'use client';
+import { useCallback } from 'react';
 import { AppShell, PatternToggle } from '@/components/layout';
 import { Section, NumInput, ShareButton } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_INPUT_A, DEFAULT_INPUT_B } from '@/lib/calc/simulate';
 import { PRESETS } from '@/lib/calc/presets';
 
 function InputPanel({ pattern }: { pattern: 'A' | 'B' }) {
-  const { inputA, inputB, resultA, resultB, setInputA, setInputB } = useSimStore();
+  const { inputA, inputB, resultA, resultB, setInputA, setInputB } = useSimStore(
+    useShallow(s => ({ inputA: s.inputA, inputB: s.inputB, resultA: s.resultA, resultB: s.resultB, setInputA: s.setInputA, setInputB: s.setInputB }))
+  );
   const input = pattern === 'A' ? inputA : inputB;
   const result = pattern === 'A' ? resultA : resultB;
-  const set = (v: Parameters<typeof setInputA>[0]) => pattern === 'A' ? setInputA(v) : setInputB(v);
+  const set = useCallback(
+    (v: Parameters<typeof setInputA>[0]) => pattern === 'A' ? setInputA(v) : setInputB(v),
+    [pattern, setInputA, setInputB]
+  );
 
   return (
     <div className="space-y-4">

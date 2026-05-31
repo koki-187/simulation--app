@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 interface NumInputProps {
   label: string;
@@ -21,7 +21,7 @@ const FMT: Record<string, (v: number) => string> = {
   years: (v) => v + '年',
 };
 
-export function NumInput({ label, value, onChange, unit, note, fmt = 'number', min, max, step = 1, readOnly }: NumInputProps) {
+export const NumInput = memo(function NumInput({ label, value, onChange, unit, note, fmt = 'number', min, max, step = 1, readOnly }: NumInputProps) {
   const displayValue = fmt === 'percent' ? value * 100 : value;
   const [localValue, setLocalValue] = useState<string>('');
   const [focused, setFocused] = useState(false);
@@ -123,4 +123,4 @@ export function NumInput({ label, value, onChange, unit, note, fmt = 'number', m
       )}
     </div>
   );
-}
+});

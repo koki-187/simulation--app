@@ -49,6 +49,7 @@
 
 import { SimResult, CFRow, AmortRow } from '@/lib/calc/types';
 import { cashflowBarChartSvg } from './chartSvg';
+import { cagr, mult } from '@/lib/format';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const BLACK = '#000000';
@@ -574,8 +575,8 @@ export function saleSectionHtml(result: SimResult, patternLabel: string): string
     const isHL = i === bestIdx;
     const bg   = isHL ? BLACK : (i % 2 === 0 ? WHITE : LIGHT);
     const Cell = isHL ? tdHL : td;
-    const cagrStr = `${(s.cagr * 100).toFixed(2)}%`;
-    const multStr = `${s.investmentMultiple.toFixed(2)}x`;
+    const cagrStr = cagr(s.cagr);
+    const multStr = mult(s.investmentMultiple);
     return `
       <tr style="background:${bg};">
         ${Cell(esc(s.label), 'left', isHL ? 'font-weight:600;' : 'font-weight:500;')}
@@ -598,7 +599,7 @@ export function saleSectionHtml(result: SimResult, patternLabel: string): string
     ${kpiBlock([
       { enLabel: 'Property Price',    value: fmtM(input.propertyPrice), sub: '取得価格' },
       { enLabel: 'Best Net Proceeds', value: fmt(bestScenario?.afterTaxProfit ?? 0), sub: '最良シナリオ 税引後手残り' },
-      { enLabel: 'Best CAGR',         value: `${((bestScenario?.cagr ?? 0) * 100).toFixed(2)}%`, sub: '最良シナリオ 年平均成長率' },
+      { enLabel: 'Best CAGR',         value: cagr(bestScenario?.cagr ?? NaN), sub: '最良シナリオ 年平均成長率' },
     ])}
 
     <!-- Legend -->

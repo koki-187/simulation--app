@@ -1,6 +1,6 @@
 import { SimInput, SimResult, CFRow, Ratios } from './types';
 import { LONG_TERM_CG_TAX_RATE, SHORT_TERM_CG_TAX_RATE } from './constants';
-import { calcPMT, calcAmortization, balanceAtYear, annualInterest, calcBankOptions } from './mortgage';
+import { calcPMT, calcAmortization, calcBankOptions } from './mortgage';
 import { calcDepreciation } from './depreciation';
 import { calcTotalTax, calcIncomeTaxRate, calcIncomeTax, calcResidentTax, calcSaleScenarios } from './tax';
 
@@ -33,6 +33,15 @@ export function simulate(input: SimInput): SimResult {
   // ── Amortization ─────────────────────────────────────────────────────────────
   const amortization = calcAmortization(loanAmount, rate, termYears);
 
+  // Bucket annual interest and year-end balance in one O(months) pass to avoid
+  // O(years*months) re-scans of the amortization schedule in the loop below.
+  const interestByYear = new Map<number, number>();
+  const balByYear = new Map<number, number>();
+  for (const r of amortization) {
+    interestByYear.set(r.year, (interestByYear.get(r.year) ?? 0) + r.interest);
+    balByYear.set(r.year, r.balance); // iteration order → last write = year-end balance
+  }
+
   // ── Annual Cash Flows ─────────────────────────────────────────────────────────
   let cumCF = 0;
   const cashFlows: CFRow[] = [];
@@ -44,14 +53,14 @@ export function simulate(input: SimInput): SimResult {
     const fat = fixedAssetTax;
     const opCF = rental - mgmtCosts - fat;
     const annLoan = y <= termYears ? monthlyPayment * 12 : 0;
-    const loanInt = annualInterest(amortization, y);
+    const loanInt = interestByYear.get(y) ?? 0;
     const preTaxCF = opCF - annLoan;
     const dep = depRows[y - 1]?.totalAnnual ?? 0;
     const taxableInc = rental - mgmtCosts - fat - loanInt - dep;
     const tax = calcTotalTax(taxableInc);
     const afterTaxCF = preTaxCF - tax;
     cumCF += afterTaxCF;
-    const loanBal = y <= termYears ? balanceAtYear(amortization, y) : 0;
+    const loanBal = y <= termYears ? (balByYear.get(y) ?? 0) : 0;
 
     cashFlows.push({
       year: y,
@@ -72,7 +81,7 @@ export function simulate(input: SimInput): SimResult {
   }
 
   // ── Sale Scenarios ──────────────────────────────────────────────────────────
-  const balAtSale = balanceAtYear(amortization, holdingYears);
+  const balAtSale = balByYear.get(holdingYears) ?? 0;
   const cumDepAtSale = depRows[holdingYears - 1]?.cumDepreciation ?? 0;
   const cumCFAtSale = cashFlows[holdingYears - 1]?.cumulativeCF ?? 0;
   const saleScenarios = calcSaleScenarios(
