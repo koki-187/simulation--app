@@ -52,12 +52,13 @@ function calcSaleRow(
 
     const afterTaxProfit = preTaxProfit - capitalGainsTax;
     const totalReturn = afterTaxProfit + cumulativeCF;
+    // 初期投資0は算出不能 → NaN（表示層で「—」）
     const cagrVal = initialInvestment > 0 && year > 0
       ? Math.pow(Math.max(0.001, totalReturn + initialInvestment) / initialInvestment, 1 / year) - 1
-      : 0;
+      : NaN;
     const investmentMultiple = initialInvestment > 0
       ? (totalReturn + initialInvestment) / initialInvestment
-      : 0;
+      : NaN;
 
     return {
       label: s.label,
@@ -117,6 +118,7 @@ const METRIC_OPTIONS: { key: MetricKey; label: string; fmt: (v: number) => strin
 ];
 
 function colorFor(key: MetricKey, val: number): string {
+  if (!isFinite(val)) return 'text-neutral-400'; // 算出不能（初期投資0）→ ニュートラル
   if (key === 'investmentMultiple') return val >= 1 ? 'text-success-500' : 'text-danger-500';
   return val >= 0 ? 'text-success-500' : 'text-danger-500';
 }

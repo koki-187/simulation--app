@@ -101,6 +101,14 @@ export const useSimStore = create<SimStore>()(
         inputB: state.inputB,
         activePattern: state.activePattern,
       }),
+      // CRITICAL: resultA/resultB are NOT persisted (see partialize). After the
+      // store rehydrates inputA/inputB from localStorage, the result snapshots
+      // are still the DEFAULT_INPUT computations from the initial state, so the
+      // dashboard/sale pages would show default-scenario numbers that contradict
+      // the restored inputs. Recompute results from the rehydrated inputs here.
+      onRehydrateStorage: () => (state) => {
+        state?.recalculate();
+      },
     }
   )
 );

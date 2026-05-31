@@ -130,7 +130,7 @@ export default function ComparePage() {
     { subject: '利回り', A: Math.min(100, resultA.ratios.grossYield * 1000), B: Math.min(100, resultB.ratios.grossYield * 1000) },
     { subject: '実質利回り', A: Math.min(100, Math.max(0, resultA.ratios.netYield * 1000)), B: Math.min(100, Math.max(0, resultB.ratios.netYield * 1000)) },
     { subject: 'CF(1年目)', A: Math.min(100, Math.max(0, (cf0A + 2000000) / 40000)), B: Math.min(100, Math.max(0, (cf0B + 2000000) / 40000)) },
-    { subject: 'CAGR', A: Math.min(100, Math.max(0, saleA.cagr * 500)), B: Math.min(100, Math.max(0, saleB.cagr * 500)) },
+    { subject: 'CAGR', A: Math.min(100, Math.max(0, (isFinite(saleA.cagr) ? saleA.cagr : 0) * 500)), B: Math.min(100, Math.max(0, (isFinite(saleB.cagr) ? saleB.cagr : 0) * 500)) },
     { subject: 'DSCR', A: Math.min(100, resultA.ratios.dscr * 40), B: Math.min(100, resultB.ratios.dscr * 40) },
     { subject: '低金利', A: Math.max(0, 100 - inputA.rate * 2000), B: Math.max(0, 100 - inputB.rate * 2000) },
     { subject: '低返済比率', A: Math.max(0, 100 - resultA.ratios.repaymentRatioTax * 300), B: Math.max(0, 100 - resultB.ratios.repaymentRatioTax * 300) },

@@ -163,7 +163,7 @@ describe('calcBankOptions', () => {
   });
 
   it('変動金利 < フラット35 の月額', () => {
-    const flat = opts.find(o => o.name === 'フラット35')!;
+    const flat = opts.find(o => o.name.includes('フラット35'))!;
     const variable = opts.filter(o => o.type === '変動');
     for (const v of variable) {
       expect(v.monthlyPayment).toBeLessThan(flat.monthlyPayment);

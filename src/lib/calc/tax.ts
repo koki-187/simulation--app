@@ -86,12 +86,14 @@ export function calcSaleScenarios(
     const totalReturn = afterTaxProfit + cumulativeCF;
     const totalReturnFinal = totalReturn + initialInvestment;
     // holdingYears=0 の場合は 1/0 = Infinity になるため 0 を返す
+    // 初期投資額が0（フルローン＋諸費用0）の場合、CAGR・投資倍率は数学的に算出不能。
+    // NaN を返し、表示層（format.ts の isFinite ガード）で「—」を出す。
     const cagr = initialInvestment > 0 && holdingYears > 0
       ? totalReturnFinal <= 0
         ? -1  // 全損シナリオ: −100%
         : Math.pow(totalReturnFinal / initialInvestment, 1 / holdingYears) - 1
-      : 0;
-    const investmentMultiple = initialInvestment > 0 ? (totalReturn + initialInvestment) / initialInvestment : 0;
+      : NaN;
+    const investmentMultiple = initialInvestment > 0 ? (totalReturn + initialInvestment) / initialInvestment : NaN;
 
     return {
       label: s.label,

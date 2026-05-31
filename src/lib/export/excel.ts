@@ -1,7 +1,7 @@
 'use client';
 
 import type { SimResult } from '@/lib/calc/types';
-import { pct, cagr } from '@/lib/format';
+import { pct, cagr, mult } from '@/lib/format';
 
 type RowData = (string | number)[];
 
@@ -113,7 +113,7 @@ export async function exportExcel(resultA: SimResult, resultB: SimResult | null)
     res.saleScenarios.map(s => [
       s.label, s.holdingYears, s.salePrice, s.loanBalance, s.sellingCosts,
       s.preTaxProfit, s.taxableGain, s.capitalGainsTax, s.afterTaxProfit,
-      cagr(s.cagr), `${s.investmentMultiple.toFixed(2)}x`,
+      cagr(s.cagr), mult(s.investmentMultiple),
     ]);
 
   const saleData: RowData[] = [saleHeader, ['── Pattern A ──'], ...makeSaleRows(resultA)];
