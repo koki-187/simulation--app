@@ -1,14 +1,17 @@
 'use client';
 import React, { useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { AppShell } from '@/components/layout';
 import { StatBox, ExportBar } from '@/components/ui';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, cagr, mult } from '@/lib/format';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { simulate } from '@/lib/calc/simulate';
 import type { SimInput } from '@/lib/calc/types';
+
+const CFBarChart = dynamic(() => import('./_charts').then(m => m.CFBarChart), { ssr: false, loading: () => <div className="animate-pulse rounded-xl bg-neutral-100" style={{ height: 280 }} /> });
+const CumAreaChart = dynamic(() => import('./_charts').then(m => m.CumAreaChart), { ssr: false, loading: () => <div className="animate-pulse rounded-xl bg-neutral-100" style={{ height: 280 }} /> });
 
 export default function Dashboard() {
   const { resultA, resultB, inputA, inputB } = useSimStore(
@@ -165,33 +168,13 @@ export default function Dashboard() {
           {/* Annual CF Chart */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-navy-500 mb-3">年次税引後キャッシュフロー（万円）</h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={cfData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                <XAxis dataKey="year" tick={{ fontSize: 13 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v: unknown) => [typeof v === 'number' ? `${v.toLocaleString('ja-JP')}万円` : `${v}万円`]} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="A 税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
-                <Bar dataKey="B 税引後CF" fill="#F5A623" radius={[2,2,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <CFBarChart data={cfData} />
           </div>
 
           {/* Cumulative CF Chart */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-navy-500 mb-3">累計キャッシュフロー（万円）</h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={cfData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                <XAxis dataKey="year" tick={{ fontSize: 13 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v: unknown) => [typeof v === 'number' ? `${v.toLocaleString('ja-JP')}万円` : `${v}万円`]} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="A 累計CF" stroke="#1C2B4A" fill="#EEF1F6" strokeWidth={2} />
-                <Area type="monotone" dataKey="B 累計CF" stroke="#E8632A" fill="#FFF5F0" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <CumAreaChart data={cfData} />
           </div>
         </div>
 

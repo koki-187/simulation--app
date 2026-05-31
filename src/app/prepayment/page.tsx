@@ -2,16 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { AppShell } from '@/components/layout';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const PrepayBalanceChart = dynamic(() => import('./_charts').then(m => m.PrepayBalanceChart), { ssr: false, loading: () => <div className="animate-pulse rounded-xl bg-neutral-100" style={{ height: 250 }} /> });
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 const yen = (n: number) => Math.round(n).toLocaleString('ja-JP') + '円';
@@ -619,50 +612,7 @@ export default function PrepaymentPage() {
           {/* Chart */}
           <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
             <p className="text-sm font-bold text-navy-500 mb-3">元金残高推移</p>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EAECF0" />
-                <XAxis
-                  dataKey="year"
-                  tickFormatter={v => `${v}年`}
-                  tick={{ fontSize: 11, fill: '#667085' }}
-                />
-                <YAxis
-                  tickFormatter={v => `${v}万`}
-                  tick={{ fontSize: 11, fill: '#667085' }}
-                  width={52}
-                />
-                <Tooltip
-                  formatter={(value, name) => [
-                    value != null ? `${Number(value).toLocaleString('ja-JP')}万円` : '完済',
-                    name === 'base' ? '繰上げなし' : '繰上げあり',
-                  ]}
-                  labelFormatter={(label) => `${label}年経過`}
-                  contentStyle={{ fontSize: 12 }}
-                />
-                <Legend
-                  formatter={v => v === 'base' ? '繰上げなし' : '繰上げあり'}
-                  wrapperStyle={{ fontSize: 12 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="base"
-                  stroke="#98A2B3"
-                  strokeWidth={2}
-                  dot={false}
-                  name="base"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="prep"
-                  stroke="#E8632A"
-                  strokeWidth={2.5}
-                  dot={false}
-                  name="prep"
-                  connectNulls={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <PrepayBalanceChart data={chartData} />
           </div>
 
           {/* Comparison table */}

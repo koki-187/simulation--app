@@ -2,12 +2,15 @@
 import { AppShell } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { yen } from '@/lib/format';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
+
+const BankInterestChart = dynamic(() => import('./_charts').then(m => m.BankInterestChart), { ssr: false, loading: () => <div className="animate-pulse rounded-xl bg-neutral-100" style={{ height: 200 }} /> });
 
 export default function BanksPage() {
   const { resultA } = useSimStore();
   const banks = resultA.banks;
   const minInterest = banks.length > 0 ? Math.min(...banks.map(b => b.totalInterest)) : 0;
+  const chartData = banks.map(b => ({ name: b.name.replace('銀行','').replace('ネット',''), 総利息: Math.round(b.totalInterest/10000) }));
 
   return (
     <AppShell>
@@ -18,15 +21,7 @@ export default function BanksPage() {
       <div className="p-6 space-y-6">
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
           <h3 className="text-sm font-bold text-navy-500 mb-3">総利息比較（万円）</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={banks.map(b => ({ name: b.name.replace('銀行','').replace('ネット',''), 総利息: Math.round(b.totalInterest/10000) }))}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
-              <Bar dataKey="総利息" fill="#1C2B4A" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <BankInterestChart data={chartData} />
         </div>
 
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card overflow-hidden">

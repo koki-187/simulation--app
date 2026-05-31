@@ -4,8 +4,10 @@ import { AppShell } from '@/components/layout';
 import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen, pct, cagr, mult } from '@/lib/format';
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer, Tooltip } from 'recharts';
+import dynamic from 'next/dynamic';
 import { radarChartSvg } from '@/lib/pdf/chartSvg';
+
+const CompareRadarChart = dynamic(() => import('./_charts').then(m => m.CompareRadarChart), { ssr: false, loading: () => <div className="animate-pulse rounded-xl bg-neutral-100" style={{ height: 280 }} /> });
 
 async function exportComparePDF(
   rows: { label: string; fmtA: string; fmtB: string; betterA: boolean }[],
@@ -182,17 +184,7 @@ export default function ComparePage() {
         {/* Radar chart */}
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4">
           <h3 className="text-sm font-bold text-navy-500 mb-3">総合評価レーダー（正規化スコア）</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <RadarChart data={radarData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13 }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 12 }} />
-              <Radar name={`A: ${inputA.propertyName}`} dataKey="A" stroke="#E8632A" fill="#E8632A" fillOpacity={0.25} strokeWidth={2} />
-              <Radar name={`B: ${inputB.propertyName}`} dataKey="B" stroke="#1C2B4A" fill="#1C2B4A" fillOpacity={0.15} strokeWidth={2} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Tooltip formatter={(v: unknown) => [`${Math.round(Number(v))}pt`]} />
-            </RadarChart>
-          </ResponsiveContainer>
+          <CompareRadarChart data={radarData} nameA={inputA.propertyName} nameB={inputB.propertyName} />
           <p className="text-[10px] text-neutral-400 mt-1 text-center">※各指標を0〜100に正規化したスコアです。数値の絶対値ではなく相対比較にご利用ください。</p>
         </div>
 

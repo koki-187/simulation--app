@@ -5,7 +5,9 @@ import { useSimStore } from '@/store/simulatorStore';
 import { useShallow } from 'zustand/react/shallow';
 import { yen } from '@/lib/format';
 import { CFRow, SimInput, SimResult } from '@/lib/calc/types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import dynamic from 'next/dynamic';
+
+const CFBarChart = dynamic(() => import('./_charts').then(m => m.CFBarChart), { ssr: false, loading: () => <div className="animate-pulse rounded-xl bg-neutral-100" style={{ height: 280 }} /> });
 
 async function exportCashflowPDF(
   resultA: SimResult,
@@ -96,18 +98,7 @@ export default function CashFlowPage() {
         <div className="bg-white rounded-xl border border-neutral-100 shadow-card p-4 overflow-hidden">
           <h3 className="text-sm font-bold text-navy-500 mb-3">年次CF推移（万円）</h3>
           <div className="overflow-hidden">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F6F8" />
-                <XAxis dataKey="year" tick={{ fontSize: 13 }} />
-                <YAxis tick={{ fontSize: 13 }} tickFormatter={(v) => v.toLocaleString('ja-JP')} width={60} />
-                <Tooltip formatter={(v: unknown) => [`${v}万円`]} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <ReferenceLine y={0} stroke="#667085" strokeDasharray="3 3" />
-                <Bar dataKey="運営CF" fill="#1C2B4A" radius={[2,2,0,0]} />
-                <Bar dataKey="税引後CF" fill="#E8632A" radius={[2,2,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <CFBarChart data={chartData} />
           </div>
         </div>
 
