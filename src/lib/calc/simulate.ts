@@ -239,7 +239,7 @@ export const DEFAULT_INPUT_A: SimInput = {
   location: '東京都',
   equity: 2_000_000,
   expenses: 800_000,
-  rate: 0.02,
+  rate: 0.025,           // 投資用ローン基準金利 2.50%（2026年5月更新）
   termYears: 35,
   lender: '',
   monthlyRent: 90_000,

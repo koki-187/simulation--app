@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export function proxy(request: NextRequest) {
-  // nonce 生成（リクエストごとにユニーク）
-  const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV !== 'production';
 
-  // 本番: strict-dynamic + nonce (unsafe-eval なし)
-  // 開発: unsafe-eval を維持（HMR/dev tools 用）
+  // 本番: 'self' + 'unsafe-inline' — 静的ページは nonce を script タグに付与できないため
+  //       nonce + strict-dynamic は動的レンダリングでないと機能しない
+  // 開発: unsafe-eval を追加（HMR/dev tools 用）
   const scriptSrc = isDev
-    ? `'self' 'nonce-${nonce}' 'unsafe-eval' 'unsafe-inline'`
-    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    ? `'self' 'unsafe-eval' 'unsafe-inline'`
+    : `'self' 'unsafe-inline'`;
 
   const csp = [
     "default-src 'self'",
@@ -24,13 +23,7 @@ export function proxy(request: NextRequest) {
     "form-action 'self'",
   ].join('; ');
 
-  // nonce をリクエストヘッダーに追加（layout.tsx で読み取り可能）
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-
-  const response = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  const response = NextResponse.next();
 
   // CSP をレスポンスヘッダーに設定
   response.headers.set('Content-Security-Policy', csp);

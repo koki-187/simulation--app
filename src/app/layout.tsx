@@ -38,14 +38,14 @@ export const metadata: Metadata = {
     icon: [
       { url: '/icons/icon-16x16.png',  sizes: '16x16',  type: 'image/png' },
       { url: '/icons/icon-32x32.png',  sizes: '32x32',  type: 'image/png' },
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/icon-transparent-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-transparent-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: [
       { url: '/favicon.ico', type: 'image/x-icon' },
     ],
     apple: [
-      { url: '/icons/icon-180x180.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/icon-transparent-180x180.png', sizes: '180x180', type: 'image/png' },
       { url: '/icons/icon-167x167.png', sizes: '167x167', type: 'image/png' },
       { url: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
     ],

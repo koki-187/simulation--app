@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   experimental: {
-    optimizePackageImports: ['recharts'],
+    optimizePackageImports: ['recharts', 'lucide-react', 'date-fns', '@radix-ui/react-icons'],
   },
   turbopack: {
     root: __dirname,

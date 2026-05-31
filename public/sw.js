@@ -1,5 +1,5 @@
 /* MAS Service Worker */
-const CACHE_VERSION = 'mas-v3';
+const CACHE_VERSION = 'mas-v4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const MAX_DYNAMIC_ENTRIES = 50;
@@ -7,7 +7,7 @@ const MAX_DYNAMIC_ENTRIES = 50;
 // 必須プリキャッシュ対象
 const PRECACHE_REQUIRED = ['/offline.html'];
 // 任意プリキャッシュ対象（失敗しても続行）
-const PRECACHE_OPTIONAL = ['/manifest.json', '/favicon.ico', '/mas-logo.png', '/icons/icon-192x192.png', '/icons/icon-512x512.png'];
+const PRECACHE_OPTIONAL = ['/', '/manifest.json', '/favicon.ico', '/mas-logo.png', '/icons/icon-192x192.png', '/icons/icon-512x512.png'];
 
 self.addEventListener('install', (event) => {
   // skipWaiting は message ハンドラ経由で制御（ServiceWorkerRegistration.tsx と連携）

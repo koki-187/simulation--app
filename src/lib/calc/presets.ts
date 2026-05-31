@@ -20,7 +20,7 @@ export const PRESETS: Preset[] = [
       propertyPrice: 50_000_000,
       equity: 5_000_000,
       expenses: 1_500_000,
-      rate: 0.018,
+      rate: 0.025,           // 投資用ローン基準金利 2.50%（2026年5月更新）
       termYears: 35,
       monthlyRent: 150_000,
       managementFee: 12_000,
