@@ -206,9 +206,9 @@ export function createDefaultResult(input: SimInput): SimResult {
     depreciation: [],
     cashFlows: [],
     saleScenarios: [
-      { label: '悲観', multiplier: 0.9, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: 0, investmentMultiple: 0, holdingYears: input.holdingYears },
-      { label: '標準', multiplier: 1.0, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: 0, investmentMultiple: 0, holdingYears: input.holdingYears },
-      { label: '楽観', multiplier: 1.1, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: 0, investmentMultiple: 0, holdingYears: input.holdingYears },
+      { label: '悲観', multiplier: 0.9, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: NaN, investmentMultiple: NaN, holdingYears: input.holdingYears },
+      { label: '標準', multiplier: 1.0, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: NaN, investmentMultiple: NaN, holdingYears: input.holdingYears },
+      { label: '楽観', multiplier: 1.1, salePrice: 0, loanBalance: 0, sellingCosts: 0, preTaxProfit: 0, acquisitionCost: 0, accumulatedDep: 0, taxableGain: 0, capitalGainsTax: 0, afterTaxProfit: 0, cagr: NaN, investmentMultiple: NaN, holdingYears: input.holdingYears },
     ],
     taxDetail: {
       rentalRevenue: 0, managementExp: 0, repairExp: 0, insuranceEst: 0,

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export function proxy(request: NextRequest) {
+export function proxy() {
   const isDev = process.env.NODE_ENV !== 'production';
 
   // 本番: 'self' + 'unsafe-inline' — 静的ページは nonce を script タグに付与できないため
